@@ -180,7 +180,7 @@ class CachePattern(models.Model):
 
     # FIXME: function to create
 
-class CacheQuestion(models.Model):
+class PatternQuestion(models.Model):
     question_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     pattern = models.ForeignKey('CachePattern', on_delete=models.PROTECT)
     for_user = models.TextField()
@@ -195,8 +195,8 @@ class CacheQuestion(models.Model):
         result.index = index
         return result
 
-class CacheAnswer(models.Model):
-    question = models.ForeignKey('CacheQuestion', on_delete=models.PROTECT)
+class PatternAnswer(models.Model):
+    question = models.ForeignKey('PatternQuestion', on_delete=models.PROTECT)
     access_results_raw = models.TextField()
     final_state_raw = models.TextField()
     score = models.IntegerField()

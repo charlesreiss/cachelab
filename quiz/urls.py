@@ -4,6 +4,6 @@ from . import views
 
 urlpatterns = [
     path('', views.quiz, name='quiz'),
-    path('submit-cache-answer/<question_id>', views.cache_answer, name='cache_answer'),
+    path('submit-pattern-answer/<question_id>', views.pattern_answer, name='pattern_answer'),
 ]
 

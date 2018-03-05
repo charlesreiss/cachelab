@@ -2,29 +2,29 @@ from django import template
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
-from .models import CacheAnswer, CacheQuestion, CacheParameters
+from .models import PatternAnswer, PatternQuestion, CacheParameters
 
 def quiz(request):
-    all_questions = CacheQuestion.objects.all()
+    all_questions = PatternQuestion.objects.all()
     if len(all_questions) == 0:
         parameters = CacheParameters()
         parameters.save()
-        the_question = CacheQuestion.generate_random(parameters, 'test', 0)
+        the_question = PatternQuestion.generate_random(parameters, 'test', 0)
         the_question.save()
     else:
         the_question = all_questions[0]
-    return cache_question_detail(request, the_question.question_id)
+    return pattern_question_detail(request, the_question.question_id)
     
-def cache_question_detail(request, question_id):
-    question = CacheQuestion.objects.get(question_id=question_id)
+def pattern_question_detail(request, question_id):
+    question = PatternQuestion.objects.get(question_id=question_id)
     context = {
         'question': question,
     }
     return HttpResponse(render(request, 'quiz/cache_question.html', context))
 
-def cache_answer(request, question_id):
+def pattern_answer(request, question_id):
     question = get_object_or_404(Question, question_id=question_id)
-    answer = CacheAnswer()
+    answer = PatternAnswer()
     answer.question = question
     expected_results = question.access_results
     actual_results = []
