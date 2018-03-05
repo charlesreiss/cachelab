@@ -1,0 +1,45 @@
+{% load quiz_extras %}
+
+{% if answer %}
+Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points.<br />
+If you'd like to try again, you can <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button></form>
+{% else %}
+{% endif %}
+
+<form action="{% url 'pattern-answer' question.question_id %}" method="post">
+{% csrf_token %}
+<p>
+Consider a cache with the following parameters:
+<ul>
+<li>{{ question.pattern.parameters.num_ways }} ways</li>
+<li>{{ question.pattern.parameters.num_indices }} sets</li>
+<li>{{ question.pattern.parameters.entry_size }} bytes per cache block</li>
+<li>{{ question.pattern.parameters.offset_bits }} offset bits</li>
+<li>{{ question.pattern.parameters.index_bits }} index bits</li>
+<li>{{ question.pattern.parameters.cache_size_bytes }} bytes (total data)</li>
+<li>an LRU replacement policy</li>
+</ul>
+<p>
+Assuming the cache is <strong>initially empty</strong>. 
+Then memory is accessed shown below. For each access, indicate whether it is a cache hit.
+<ul>
+{% for access, old_answer, actual_answer in accesses_with_default_and_correct %}
+    <li>{{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.address_bits %}</code>:
+        <input type="checkbox" name="access_hit_{{ forloop.counter0 }}" value="hit"
+            {% if old_answer %} checked {% endif %}
+            {% if answer %} disabled {% endif %}
+            ><label for="access_hit_{{ forloop.counter0 }}">is hit?<label>
+            {% if answer %} (was{% if actual_answer == old_answer %} correct{% else %} incorrect{% endif %}; correct answer: {% if actual_answer %} hit{% else %} miss{% endif %}) {% endif %}
+{% endfor %}
+    </li>
+</ul>
+<input type="submit" value="submit answers"
+{% if answer %} disabled {% endif %}
+>
+</form>
+<h2>Expected result</h2>
+<ul>
+{% for result in question.pattern.access_results %}
+    <li>result should be {% if result %}hit{% else %}miss{% endif %}</li>
+{% endfor %}
+</ul>

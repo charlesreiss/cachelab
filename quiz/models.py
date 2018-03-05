@@ -60,6 +60,10 @@ class CacheParameters(models.Model):
     def index_bits(self):
         return int(math.log2(self.num_indices))
 
+    @property
+    def cache_size_bytes(self):
+        return self.num_ways * self.num_indices * self.entry_size
+
     def split_address(self, address):
         offset = address & ~((~0) << self.offset_bits)
         index = (address >> self.offset_bits) & ~((~0) << self.index_bits)
@@ -147,25 +151,28 @@ class CachePattern(models.Model):
         # FIXME: don't store?
     final_state_raw = models.TextField()
 
+    @property
     def accesses(self):
         return list(map(CacheAccess, json.loads(self.accesses_raw)))
 
+    @property
     def access_results(self):
         return json.loads(self.access_results_raw)
-
+    
+    @property
     def final_state(self):
         return CacheState.from_json(self.final_state_raw)
 
     def generate_results(self):
         state = CacheState(self.parameters)
         results = []
-        for access in self.accesses():
+        for access in self.accesses:
             results.append(state.apply_access(access))
         self.access_results_raw = json.dumps(results)
         self.final_state_raw = state.to_json()
 
     @staticmethod
-    def generate_random(parameters, num_accesses=50):
+    def generate_random(parameters, num_accesses=10):
         result = CachePattern()
         result.parameters = parameters
         accesses =  []
@@ -187,12 +194,22 @@ class PatternQuestion(models.Model):
     index = models.IntegerField()
 
     @staticmethod
-    def generate_random(parameters, for_user, index):
+    def last_question_for_user(for_user):
+        return PatternQuestion.objects.filter(for_user__exact=for_user).order_by('-index').first()    
+
+    @staticmethod
+    def generate_random(parameters, for_user):
+        last_question = PatternQuestion.last_question_for_user(for_user)
+        if last_question:
+            index = last_question.index + 1
+        else:
+            index = 0
         pattern = CachePattern.generate_random(parameters)
-        result = CacheQuestion()
+        result = PatternQuestion()
         result.pattern = pattern
         result.for_user = for_user
         result.index = index
+        result.save()
         return result
 
 class PatternAnswer(models.Model):
@@ -202,11 +219,20 @@ class PatternAnswer(models.Model):
     score = models.IntegerField()
     submit_time = models.DateTimeField(auto_now=True,editable=False)
 
-    @property
-    def access_results(self):
+    def get_access_results(self):
         return json.loads(self.access_results_raw)
 
-    @access_results.setter
     def set_access_results(self, value):
         self.access_results_raw = json.dumps(value)
+
+    access_results = property(get_access_results, set_access_results)
+
+    @staticmethod
+    def last_for_question(question):
+        return PatternAnswer.objects.filter(question=question).order_by('-submit_time').first()
+
+    @property
+    def max_score(self):
+        return len(self.access_results)
+
 
