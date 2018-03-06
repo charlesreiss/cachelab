@@ -1,29 +1,38 @@
 import itertools
+import json
 
 from django import template
+from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import permission_required, login_required
 
 from .models import PatternAnswer, PatternQuestion, CachePattern, CacheParameters
 
+@login_required
 def quiz(request):
-    question = PatternQuestion.last_question_for_user('test')
+    question = PatternQuestion.last_question_for_user(request.user.username)
     if not question:
-        PatternQuestion.generate_random(parameters=CacheParameters.objects.first(), for_user='test')
+        # FIXME : use existing
+        parameters = CacheParameters()
+        parameters.save()
+        PatternQuestion.generate_random(parameters=parameters, for_user=request.user.username)
         question = PatternQuestion.last_question_for_user('test')
-    return pattern_question_detail(request, PatternQuestion.last_question_for_user('test').question_id)
+    return pattern_question_detail(request, PatternQuestion.last_question_for_user(request.user.username).question_id)
 
+@login_required
 @require_http_methods(["POST"])
 def new_pattern_question(request):
     name = 'test'
     PatternQuestion.generate_random(parameters=CacheParameters.objects.first(), for_user='test')
     return redirect('quiz')
 
+# FIXME: @permission_required('quiz.delete_patternquestion')
 def test_control(request):
     return HttpResponse(render(request, 'quiz/test_control.html', {}))
+
     
 def pattern_question_detail(request, question_id):
     question = PatternQuestion.objects.get(question_id=question_id)
@@ -64,9 +73,9 @@ def pattern_answer(request, question_id):
 
 # FIXME: make admin only
 @require_http_methods(["POST"])
-@permission_required('quiz.delete_patternquestion')
+#@permission_required('quiz.delete_patternquestion')
 def clear_all_questions(request):
-    if PatternQuestion.objects.filter(~Q(for_user__exact='test')).count() == 0:
+    if PatternQuestion.objects.filter(~Q(for_user__exact='guest') & ~Q(for_user__exact='test')).count() == 0:
         PatternAnswer.objects.all().delete()
         PatternQuestion.objects.all().delete()
         CachePattern.objects.all().delete()

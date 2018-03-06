@@ -1,0 +1,5 @@
+<form action="{% url 'forwarded-login' %}" method="post">
+{% csrf_token %}
+<input type="hidden" name="username" value="{{ username }}">
+<button>log in as {{ username }}</button>
+</form>

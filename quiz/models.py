@@ -234,5 +234,3 @@ class PatternAnswer(models.Model):
     @property
     def max_score(self):
         return len(self.access_results)
-
-
