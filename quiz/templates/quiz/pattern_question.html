@@ -1,9 +1,18 @@
+{% extends "quiz/base_generic.html" %}
+
+{% block title %}{% if show_correct %}CacheLab: access pattern quiz (results){% else %}CacheLab: access pattern quiz{% endif %}{% endblock %}
+
 {% load quiz_extras %}
 
-{% if answer %}
+{% block content %}
+{% if show_correct %}
 Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points.<br />
 If you'd like to try again, you can <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button></form>
 {% else %}
+{% endif %}
+
+{% if show_invalid %}
+Some of your answers were missing or misformatted. They are shown with <span class="missing">red</span> below.
 {% endif %}
 
 <form action="{% url 'pattern-answer' question.question_id %}" method="post">
@@ -21,25 +30,43 @@ Consider a cache with the following parameters:
 </ul>
 <p>
 Assuming the cache is <strong>initially empty</strong>. 
-Then memory is accessed shown below. For each access, indicate whether it is a cache hit.
+Then memory is accessed shown below. For each access, indicate how it is split into tag/index/offset, and whether it is a
+hit or miss. Write all address parts in <strong>hexadecimal</strong>.
 <ul>
 {% for access, old_answer, actual_answer in accesses_with_default_and_correct %}
-    <li>{{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.address_bits %}</code>:
-        <input type="checkbox" name="access_hit_{{ forloop.counter0 }}" value="hit"
-            {% if old_answer %} checked {% endif %}
-            {% if answer %} disabled {% endif %}
-            ><label for="access_hit_{{ forloop.counter0 }}">is hit?<label>
-            {% if answer %} (was{% if actual_answer == old_answer %} correct{% else %} incorrect{% endif %}; correct answer: {% if actual_answer %} hit{% else %} miss{% endif %}) {% endif %}
+    <li>DEBUG: {{ old_answer.hit_invalid }} / {{ old_answer.hit }}
+    <li>{{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.address_bits %}</code>: <br>
+        <label for="access_index_{{ forloop.counter0 }}" {% if show_invalid and old_answer.tag_invalid %} class="missing" {% endif %}>tag:</label>
+        <input type="text" id="access_tag_{{ forloop.counter0 }}" name="access_tag_{{ forloop.counter0 }}" value="{{ old_answer.tag }}" {% if show_correct %} disabled {% endif %} size="{{tag_width}}">
+        {% if show_correct %}(was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %}; correct answer: <tt>{% format_hex actual_answer.tag question.tag_bits %}</tt>){%endif %}
+        <label for="access_index_{{ forloop.counter0 }}" {% if show_invalid and old_answer.index_invalid %} class="missing" {% endif %}>index:</label>
+        <input type="text" id="access_index_{{ forloop.counter0 }}" name="access_index_{{ forloop.counter0 }}" value="{{ old_answer.index }}" {% if show_correct %} disabled {% endif %} size="{{index_width}}">
+        {% if show_correct %}(was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %}; correct answer: <tt>{% format_hex actual_answer.index  question.index_bits %}</tt>){%endif %}
+        <label for="access_offset_{{ forloop.counter0 }}" {% if show_invalid and old_answer.offset_invalid %} class="missing" {% endif %}>offset:</label>
+        <input type="text" name="access_offset_{{ forloop.counter0 }}" id="access_offset_{{ forloop.counter0 }}" value="{{ old_answer.offset }}" {% if show_correct %} disabled {% endif %} size="{{offset_width}}">
+        {% if show_correct %}(was{% if old_answer.offset_correct %} correct{% else %} incorrect{% endif %}; correct answer: <tt>{% format_hex actual_answer.offset question.offset_bits  %}</tt>){%endif %}
+        <span {% if show_invalid and old_answer.hit_invalid %}class="missing"{% endif %}>
+        <input type="radio" id="access_hit_{{ forloop.counter0 }}_ishit" name="access_hit_{{ forloop.counter0 }}" value="hit"
+            {% if not old_answer.hit_invalid and old_answer.hit == True %} checked {% endif %}
+            {% if show_correct %} disabled {% endif %}
+            ><label for="access_hit_{{ forloop.counter0 }}_ishit">hit<label>
+        <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss" name="access_hit_{{ forloop.counter0 }}" value="miss"
+            {% if show_invalid and not old_answer.hit_invalid and old_answer.hit == False %} checked {% endif %}
+            {% if show_correct %} disabled {% endif %}
+            ><label for="access_hit_{{ forloop.counter0 }}_ismiss">miss<label>
+            {% if show_correct %} (was{% if old_answer.hit_correct %} correct{% else %} incorrect{% endif %}; correct answer: {% if actual_answer.hit %} hit{% else %} miss{% endif %}) {% endif %}
+        <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss').checked = false;">reset hit/miss</button>
 {% endfor %}
     </li>
 </ul>
 <input type="submit" value="submit answers"
-{% if answer %} disabled {% endif %}
+{% if show_correct %} disabled {% endif %}
 >
 </form>
 <h2>Expected result</h2>
 <ul>
 {% for result in question.pattern.access_results %}
-    <li>result should be {% if result %}hit{% else %}miss{% endif %}</li>
+    <li>result should be {{ result.tag }} {{ result.index }} {{ result.offset }} {% if result.hit %}hit{% else %}miss{% endif %}</li>
 {% endfor %}
 </ul>
+{% endblock %}

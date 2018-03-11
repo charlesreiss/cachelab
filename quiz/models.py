@@ -118,7 +118,12 @@ class CacheState():
             if access.type == 'W':
                 found.dirty = True
         _update_lru(entries_at_index, found)
-        return was_hit
+        return {
+            'hit': was_hit,
+            'tag': tag,
+            'index': index,
+            'offset': offset
+        }
 
     def to_json(self):
         return json.dumps(list(
@@ -145,11 +150,7 @@ class CachePattern(models.Model):
     address_bits = models.IntegerField(default=6)
     # JSON list of cache accesses
     accesses_raw = models.TextField()
-    # JSON list of "is hit"
-    access_results_raw = models.TextField()
-    # JSON list of cache entries
-        # FIXME: don't store?
-    final_state_raw = models.TextField()
+    _have_access_results = False
 
     @property
     def accesses(self):
@@ -157,19 +158,23 @@ class CachePattern(models.Model):
 
     @property
     def access_results(self):
-        return json.loads(self.access_results_raw)
+        self.generate_results()
+        return self._access_results
     
     @property
     def final_state(self):
-        return CacheState.from_json(self.final_state_raw)
+        self.generate_results()
+        return self._final_state
 
     def generate_results(self):
-        state = CacheState(self.parameters)
-        results = []
-        for access in self.accesses:
-            results.append(state.apply_access(access))
-        self.access_results_raw = json.dumps(results)
-        self.final_state_raw = state.to_json()
+        if not self._have_access_results:
+            state = CacheState(self.parameters)
+            results = []
+            for access in self.accesses:
+                results.append(state.apply_access(access))
+            self._access_results = results
+            self._final_state = state
+            self._have_access_results = True
 
     @staticmethod
     def generate_random(parameters, num_accesses=10):
@@ -192,6 +197,18 @@ class PatternQuestion(models.Model):
     pattern = models.ForeignKey('CachePattern', on_delete=models.PROTECT)
     for_user = models.TextField()
     index = models.IntegerField()
+
+    @property
+    def tag_bits(self):
+        return self.pattern.address_bits - self.pattern.parameters.index_bits - self.pattern.parameters.offset_bits
+
+    @property
+    def offset_bits(self):
+        return self.pattern.parameters.offset_bits
+
+    @property
+    def index_bits(self):
+        return self.pattern.parameters.index_bits
 
     @staticmethod
     def last_question_for_user(for_user):
@@ -217,6 +234,7 @@ class PatternAnswer(models.Model):
     access_results_raw = models.TextField()
     final_state_raw = models.TextField()
     score = models.IntegerField()
+    was_complete = models.BooleanField(default=False)
     submit_time = models.DateTimeField(auto_now=True,editable=False)
 
     def get_access_results(self):
