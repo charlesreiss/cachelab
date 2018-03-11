@@ -53,22 +53,34 @@ def pattern_question_detail(request, question_id):
         'index_invalid': True,
         'offset_invalid': True,
         'hit_invalid': True,
+        'evicted': None,
     }
+    is_given = itertools.chain([True] * question.give_first, itertools.cycle([False]))
     if answer:
-        accesses_with_default = zip(question.pattern.accesses, answer.access_results, question.pattern.access_results)
+        accesses_with_default = zip(question.pattern.accesses, answer.access_results, question.pattern.access_results, is_given)
     else:
-        accesses_with_default = zip(question.pattern.accesses, itertools.cycle([empty_access]), question.pattern.access_results)
+        old_answers = [empty_access] * len(question.pattern.accesses)
+        for i in range(question.give_first):
+            old_answers[i] = question.pattern.access_results[i].copy()
+            for key in ['tag', 'index', 'offset', 'evicted']:
+                old_answers[i][key + '_invalid'] = False
+                if old_answers[i][key] != None:
+                    old_answers[i][key] = '0x{:x}'.format(old_answers[i][key])
+            old_answers[i]['hit_invalid'] = False
+        accesses_with_default = zip(question.pattern.accesses, old_answers, question.pattern.access_results, is_given)
     widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4)
     context = {
         'question': question,
         'answer': answer,
-        'accesses_with_default_and_correct': accesses_with_default,
+        'accesses_with_default_and_correct_and_given': accesses_with_default,
         'show_correct': True if answer and answer.was_complete else False,
         'show_invalid': True if answer and not answer.was_complete else False,
         'tag_width': widths,
         'offset_width': widths,
         'index_width': widths,
         'ask_evict': question.ask_evict,
+        'give_first': question.give_first,
+        'debug_enable': False,
     }
     return HttpResponse(render(request, 'quiz/pattern_question.html', context))
 
@@ -139,9 +151,11 @@ def pattern_answer(request, question_id):
                 is_complete = False
         submitted_results.append(cur_access)
     score = 0
+    i = 0
     for submitted, expected in zip(submitted_results, expected_results):
         if submitted['hit'] == expected['hit']:
-            score += 1
+            if i >= question.give_first:
+                score += 1
             submitted['hit_correct'] = True
             logger.debug("Setting hit_correct TRUE")
         else:
@@ -150,9 +164,11 @@ def pattern_answer(request, question_id):
         for which in ['tag', 'index', 'offset']:
             if _convert_value(submitted[which]) == expected[which]:
                 submitted[which + '_correct'] = True
-                score += 1
+                if i >= question.give_first:
+                    score += 1
             else:
                 submitted[which + '_correct'] = False
+        i += 1
     answer.access_results = submitted_results
     answer.was_complete = is_complete
     answer.score = score

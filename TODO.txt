@@ -3,6 +3,12 @@ Necessary features:
         - TODO: timestamps on forwarded token
 
 Things to add:
+    - starting interface showing:
+        button to get a new question
+        status of existing question
+        previous score
+    - ? interface to set parameters
+
     - separate questions about cache parameters
         - maybe: lead into cache access pattern questions
     X add splitting up address apppropriately to the cache access patterns

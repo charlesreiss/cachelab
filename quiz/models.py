@@ -147,7 +147,7 @@ class CacheState():
             'tag': tag,
             'index': index,
             'offset': offset,
-            'evicted': evicted
+            'evicted': evicted,
         }
 
     def to_json(self):
@@ -209,7 +209,16 @@ class CachePattern(models.Model):
             self._have_access_results = True
 
     @staticmethod
-    def generate_random(parameters, num_accesses=10, access_size=2, address_size=8, chance_setup_conflict_aggressive=2, chance_setup_conflict=1, chance_conflict_miss=3, chance_hit=3, chance_normal_miss=1):
+    def generate_random(parameters,
+            num_accesses=13,
+            start_actions = ['normal_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'conflict_miss'],
+            access_size=2,
+            address_size=8,
+            chance_setup_conflict_aggressive=2,
+            chance_setup_conflict=1,
+            chance_conflict_miss=3,
+            chance_hit=3,
+            chance_normal_miss=1):
         MAX_TRIES = 20
         result = CachePattern()
         result.access_size = 2
@@ -224,19 +233,22 @@ class CachePattern(models.Model):
         tag_bits = result.address_bits - (parameters.offset_bits + parameters.index_bits)
         offset_bits = parameters.offset_bits
         for i in range(num_accesses):
-            possible = ['normal_miss']
-            possible_weights = [chance_normal_miss]
-            if len(would_hit) > 0:
-                possible.append('hit')
-                possible_weights.append(chance_hit)
-                possible.append('setup_conflict_aggressive')
-                possible_weights.append(chance_setup_conflict_aggressive)
-                possible.append('setup_conflict')
-                possible_weights.append(chance_setup_conflict)
-            if len(would_miss) > 0:
-                possible.append('conflict_miss')
-                possible_weights.append(chance_conflict_miss)
-            access_kind = _random_weighted(possible, possible_weights)
+            if i < len(start_actions):
+                access_kind = start_actions[i]
+            else:
+                possible = ['normal_miss']
+                possible_weights = [chance_normal_miss]
+                if len(would_hit) > 0:
+                    possible.append('hit')
+                    possible_weights.append(chance_hit)
+                    possible.append('setup_conflict_aggressive')
+                    possible_weights.append(chance_setup_conflict_aggressive)
+                    possible.append('setup_conflict')
+                    possible_weights.append(chance_setup_conflict)
+                if len(would_miss) > 0:
+                    possible.append('conflict_miss')
+                    possible_weights.append(chance_conflict_miss)
+                access_kind = _random_weighted(possible, possible_weights)
             if access_kind == 'normal_miss':
                 for _ in range(MAX_TRIES):
                     address = random.randrange(0, 1 << result.address_bits)
@@ -305,6 +317,7 @@ class PatternQuestion(models.Model):
     for_user = models.TextField()
     ask_evict = models.BooleanField(default=True)
     index = models.IntegerField()
+    give_first = models.IntegerField(default=5)
 
     @property
     def tag_bits(self):

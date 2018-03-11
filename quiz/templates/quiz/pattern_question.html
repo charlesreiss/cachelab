@@ -32,113 +32,122 @@ Consider a cache with the following parameters:
 Assuming the cache is <strong>initially empty</strong>. 
 Then memory is accessed shown below. For each access, indicate how it is split into tag/index/offset, and whether it is a
 hit or miss. Write all address parts in <strong>hexadecimal</strong>.
+</p>
+{% if give_first > 0 %}
+<p>
+The first {{ give_first }} answers are given.
+</p>
+{% endif %}
 <ul>
-{% for access, old_answer, actual_answer in accesses_with_default_and_correct %}
-    {% if debug_enable %}
-        <li>DEBUG: {{ access.kind }}
-    {% endif %}
-    <li>{{access.size}} bytes at address <code class="addr">{% format_hex access.address question.address_bits %}</code>: <br>
-        <!-- tag --> 
-        <label for="access_index_{{ forloop.counter0 }}"
-            {% if show_invalid and old_answer.tag_invalid %} class="missing" {% endif %}
-        >tag:</label>
-        <input type="text" id="access_tag_{{ forloop.counter0 }}"
-            name="access_tag_{{ forloop.counter0 }}"
-            value="{{ old_answer.tag }}"
-            {% if show_correct %} disabled {% endif %} size="{{tag_width}}"
-        >
-        {% if show_correct %}
-            (was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %};
-             correct answer: <tt>{% format_hex actual_answer.tag question.tag_bits %}</tt>)
+{% for access, old_answer, actual_answer, is_given in accesses_with_default_and_correct_and_given %}
+        {% if debug_enable %}
+            <li>DEBUG: {{ access.kind }}
         {% endif %}
-        <!-- index -->
-        <label for="access_index_{{ forloop.counter0 }}"
-            {% if show_invalid and old_answer.index_invalid %} class="missing" {% endif %}
-        >index:</label>
-        <input type="text" id="access_index_{{ forloop.counter0 }}"
-               name="access_index_{{ forloop.counter0 }}"
-               value="{{ old_answer.index }}"
-               {% if show_correct %} disabled {% endif %} size="{{index_width}}"
-        >
-        {% if show_correct %}
-            (was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %};
-             correct answer: <tt>{% format_hex actual_answer.index  question.index_bits %}</tt>)
-        {% endif %}
-        <!-- offset -->
-        <label for="access_offset_{{ forloop.counter0 }}"
-            {% if show_invalid and old_answer.offset_invalid %} class="missing" {% endif %}
-        >offset:</label>
-        <input type="text" name="access_offset_{{ forloop.counter0 }}"
-            id="access_offset_{{ forloop.counter0 }}" value="{{ old_answer.offset }}"
-            {% if show_correct %} disabled {% endif %} size="{{offset_width}}"
-        >
-        {% if show_correct %}
-            (was{% if old_answer.offset_correct %} correct{% else %} incorrect{% endif %};
-             correct answer: <tt>{% format_hex actual_answer.offset question.offset_bits  %}</tt>)
-        {% endif %}
-        <!-- hit/miss -->
-        <fieldset {% if show_invalid and old_answer.hit_invalid %}class="missing"{% endif %}>
-            <!-- is hit? -->
-            <input type="radio" id="access_hit_{{ forloop.counter0 }}_ishit" name="access_hit_{{ forloop.counter0 }}" value="hit"
-                {% if not old_answer.hit_invalid and old_answer.hit == True %} checked {% endif %}
-                {% if show_correct %} disabled {% endif %}
-                {% if ask_evict %}
-                    onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
-                {% endif %}
-            ><label for="access_hit_{{ forloop.counter0 }}_ishit">hit</label>
-            {% if ask_evict %}
-                <!-- is miss/no evict -->
-                <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_noevict"
-                    name="access_hit_{{ forloop.counter0 }}" value="miss-noevict"
-                    {% if show_invalid and not old_answer.hit_invalid and old_answer.hit == False and old_answer.evicted == None %}
-                        checked
-                    {% endif %}
-                    {% if show_correct %}
-                        disabled
-                    {% endif %}
-                    onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
-                ><label for="access_hit_{{ forloop.counter0 }}_ismiss_noevict">miss (not evicting anything)</label>
-                <!-- is miss/evict -->
-                <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_evict"
-                    name="access_hit_{{ forloop.counter0 }}" value="miss-evict"
-                    {% if show_invalid and not old_answer.hit_invalid and old_answer.hit == False and old_answer.evicted != None %}
-                        checked 
-                    {% endif %}
-                    {% if show_correct %}
-                        disabled
-                    {% endif %}
-                    onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
-                ><label for="access_hit_{{ forloop.counter0 }}_ismiss_evict">miss, </label>
-                <!-- miss/evict address -->
-                <label for="access_hit_{{ forloop.counter0 }}_miss_evict" 
-                    {% if show_invalid and old_answer.evicted_invalid %} class="missing" {% endif %}>evicting</label>
-                <input type="text" id ="access_evict_{{ forloop.counter0 }}" name="access_evict_{{ forloop.counter0 }}" 
-                    {% if show_correct or old_answer.evicted == None %} disabled {% endif %}>
-            {% else %}
-                <!-- is miss -->
-                <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss" name="access_hit_{{ forloop.counter0 }}" value="miss"
-                    {% if show_invalid and not old_answer.hit_invalid and old_answer.miss_noevict == True %} checked {% endif %}
-                    {% if show_correct %} disabled {% endif %}
-                    ><label for="access_hit_{{ forloop.counter0 }}_ismiss">miss</label>
-                </input>
-            {% endif %}
+        <li>
+            <!-- access location/size -->
+            {{access.size}} bytes at address <code class="addr">{% format_hex access.address question.address_bits %}</code>: <br>
+            <!-- tag --> 
+            <label for="access_index_{{ forloop.counter0 }}"
+                {% if show_invalid and old_answer.tag_invalid %} class="missing" {% endif %}
+            >tag:</label>
+            <input type="text" id="access_tag_{{ forloop.counter0 }}"
+                name="access_tag_{{ forloop.counter0 }}"
+                value="{{ old_answer.tag }}"
+                {% if show_correct or is_given %} disabled {% endif %} size="{{tag_width}}"
+            >
             {% if show_correct %}
-                (was{% if old_answer.hit_correct %} correct{% else %} incorrect{% endif %};
-                 correct answer:
-                 {% if actual_answer.hit %}
-                    hit
-                {% else %}
-                    miss evicting {% format_hex actual_answer.evicted question.address_bits %}
-                {% endif %})
+                (was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %};
+                 correct answer: <tt>{% format_hex actual_answer.tag question.tag_bits %}</tt>)
             {% endif %}
-        {% if ask_evict %}
-            <!-- reset hit/miss -->
-            <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_noevict').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked = false;  document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;">reset hit/miss</button>
-        {% else %}
-            <!-- reset hit/miss -->
-            <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss').checked = false; ">reset hit/miss</button>
-        {% endif %}
-        </fieldset>
+            <!-- index -->
+            <label for="access_index_{{ forloop.counter0 }}"
+                {% if show_invalid and old_answer.index_invalid %} class="missing" {% endif %}
+            >index:</label>
+            <input type="text" id="access_index_{{ forloop.counter0 }}"
+                   name="access_index_{{ forloop.counter0 }}"
+                   value="{{ old_answer.index }}"
+                   {% if show_correct or is_given %} disabled {% endif %} size="{{index_width}}"
+            >
+            {% if show_correct %}
+                (was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %};
+                 correct answer: <tt>{% format_hex actual_answer.index  question.index_bits %}</tt>)
+            {% endif %}
+            <!-- offset -->
+            <label for="access_offset_{{ forloop.counter0 }}"
+                {% if show_invalid and old_answer.offset_invalid %} class="missing" {% endif %}
+            >offset:</label>
+            <input type="text" name="access_offset_{{ forloop.counter0 }}"
+                id="access_offset_{{ forloop.counter0 }}" value="{{ old_answer.offset }}"
+                {% if show_correct or is_given %} disabled {% endif %} size="{{offset_width}}"
+            >
+            {% if show_correct %}
+                (was{% if old_answer.offset_correct %} correct{% else %} incorrect{% endif %};
+                 correct answer: <tt>{% format_hex actual_answer.offset question.offset_bits  %}</tt>)
+            {% endif %}
+            <!-- hit/miss -->
+            <fieldset {% if show_invalid and old_answer.hit_invalid %}class="missing"{% endif %}>
+                <!-- is hit? -->
+                <input type="radio" id="access_hit_{{ forloop.counter0 }}_ishit" name="access_hit_{{ forloop.counter0 }}" value="hit"
+                    {% if not old_answer.hit_invalid and old_answer.hit == True %} checked {% endif %}
+                    {% if show_correct or is_given %} disabled {% endif %}
+                    {% if ask_evict %}
+                        onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                    {% endif %}
+                ><label for="access_hit_{{ forloop.counter0 }}_ishit">hit</label>
+                {% if ask_evict %}
+                    <!-- is miss/no evict -->
+                    <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_noevict"
+                        name="access_hit_{{ forloop.counter0 }}" value="miss-noevict"
+                        {% if not old_answer.hit_invalid and old_answer.hit == False and old_answer.evicted == None %}
+                            checked
+                        {% endif %}
+                        {% if show_correct or is_given %}
+                            disabled
+                        {% endif %}
+                        onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                    ><label for="access_hit_{{ forloop.counter0 }}_ismiss_noevict">miss (not evicting anything)</label>
+                    <!-- is miss/evict -->
+                    <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_evict"
+                        name="access_hit_{{ forloop.counter0 }}" value="miss-evict"
+                        {% if not old_answer.hit_invalid and old_answer.hit == False and old_answer.evicted != None %}
+                            checked 
+                        {% endif %}
+                        {% if show_correct or is_given %}
+                            disabled
+                        {% endif %}
+                        onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                    ><label for="access_hit_{{ forloop.counter0 }}_ismiss_evict">miss, </label>
+                    <!-- miss/evict address -->
+                    <label for="access_hit_{{ forloop.counter0 }}_miss_evict" 
+                        {% if show_invalid and old_answer.evicted_invalid %} class="missing" {% endif %}>evicting</label>
+                    <input type="text" id ="access_evict_{{ forloop.counter0 }}" name="access_evict_{{ forloop.counter0 }}" 
+                        {% if old_answer.evicted != None %} value="{{ old_answer.evicted }}" {% endif %}
+                        {% if show_correct or is_given or old_answer.evicted == None %} disabled {% endif %}>
+                {% else %}
+                    <!-- is miss -->
+                    <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss" name="access_hit_{{ forloop.counter0 }}" value="miss"
+                        {% if not old_answer.hit_invalid and old_answer.miss_noevict == True %} checked {% endif %}
+                        {% if show_correct or is_given %} disabled {% endif %}
+                        ><label for="access_hit_{{ forloop.counter0 }}_ismiss">miss</label>
+                    </input>
+                {% endif %}
+                {% if show_correct %}
+                    (was{% if old_answer.hit_correct %} correct{% else %} incorrect{% endif %};
+                     correct answer:
+                     {% if actual_answer.hit %}
+                        hit
+                    {% else %}
+                        miss evicting {% format_hex actual_answer.evicted question.address_bits %}
+                    {% endif %})
+                {% endif %}
+            {% if ask_evict %}
+                <!-- reset hit/miss -->
+                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_noevict').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked = false;  document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;">reset hit/miss</button>
+            {% else %}
+                <!-- reset hit/miss -->
+                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss').checked = false; ">reset hit/miss</button>
+            {% endif %}
+            </fieldset>
 {% endfor %}
     </li>
 </ul>
