@@ -6,11 +6,14 @@ Things to add:
     - separate questions about cache parameters
         - maybe: lead into cache access pattern questions
     X add splitting up address apppropriately to the cache access patterns
-    - ? add what is evicted to the cache access pattern question
+    X ? add what is evicted to the cache access pattern question
     - ? final state of the cache questions
 
-    - selecting accesses based on % hit/miss/conflict miss target?
+    X selecting accesses based on % hit/miss/conflict miss target?
         should allow for huge cache problems?
+
+    - less sensitivity for evicted answer
+    - example answers for three (miss/hit/miss-evict)
 
 Also consider:
     - question with C code?
