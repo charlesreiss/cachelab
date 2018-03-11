@@ -68,6 +68,7 @@ def pattern_question_detail(request, question_id):
         'tag_width': widths,
         'offset_width': widths,
         'index_width': widths,
+        'ask_evict': question.ask_evict,
     }
     return HttpResponse(render(request, 'quiz/pattern_question.html', context))
 
@@ -82,19 +83,23 @@ def _convert_value(x):
 def pattern_answer(request, question_id):
     question = get_object_or_404(PatternQuestion, question_id=question_id)
     last_answer = PatternAnswer.last_for_question(question)
-    if last_answer:
+    if last_answer and last_answer.was_complete:  # FIXME: threshold?
         return HttpResponse("You already submitted an answer to this question.")
     answer = PatternAnswer()
     answer.question = question
     expected_results = question.pattern.access_results
     submitted_results = []
     is_complete = True
+    parts = ['tag', 'index', 'offset']
+    if question.ask_evict:
+        parts.append('evicted')
     for i in range(len(expected_results)):
         cur_access = {
             'hit': False,
             'tag': None,
             'index': None,
             'offset': None,
+            'evicted': None,
         }
         hit_key = 'access_hit_{}'.format(i)
         if hit_key in request.POST:
@@ -105,11 +110,11 @@ def pattern_answer(request, question_id):
             cur_access['hit_invalid'] = True
         if hit_value == 'hit':
             cur_access['hit'] = True
-        elif hit_value == 'miss':
+        elif hit_value != None and hit_value.startswith('miss'):
             cur_access['hit'] = False
         else:
             cur_access['hit'] = None
-        for which in ['hit', 'tag', 'index', 'offset']:
+        for which in ['tag', 'index', 'offset', 'evicted']:
             key = 'access_{}_{}'.format(which, i)
             if key in request.POST:
                 value = request.POST[key].strip()
@@ -120,6 +125,17 @@ def pattern_answer(request, question_id):
                 else:
                     cur_access[which + '_invalid'] = False
             else:
+                is_complete = False
+        if hit_value != 'miss-evict':
+            cur_access['evicted'] = None
+            cur_access['evicted_invalid'] = False
+        else:
+            if cur_access['evicted'] == None:
+                cur_access['evicted'] = ''
+                cur_access['evicted_invalid'] = True
+                is_complete = False
+            elif _convert_value(cur_access['evicted']) == None:
+                cur_access['evicted_invalid'] = TRue
                 is_complete = False
         submitted_results.append(cur_access)
     score = 0

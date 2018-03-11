@@ -5,9 +5,9 @@ Necessary features:
 Things to add:
     - separate questions about cache parameters
         - maybe: lead into cache access pattern questions
-    - add splitting up address apppropriately to the cache access patterns
+    X add splitting up address apppropriately to the cache access patterns
     - ? add what is evicted to the cache access pattern question
-    - final state of the cache questions?
+    - ? final state of the cache questions
 
     - selecting accesses based on % hit/miss/conflict miss target?
         should allow for huge cache problems?

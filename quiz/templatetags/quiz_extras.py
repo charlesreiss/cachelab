@@ -7,5 +7,8 @@ logger = logging.getLogger('cachelabweb')
 
 @register.simple_tag()
 def format_hex(value, bits):
-    width = int((bits + 3) / 4)
-    return '0x{:0{width}x}'.format(value, width=width)
+    if value == None:
+        return '(none)'
+    else:
+        width = int((bits + 3) / 4)
+        return '0x{:0{width}x}'.format(value, width=width)

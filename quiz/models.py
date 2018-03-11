@@ -1,6 +1,8 @@
 from django.db import models
-import logging
+import bisect
+import itertools
 import json
+import logging
 import math
 import random
 import uuid
@@ -12,6 +14,7 @@ class CacheAccess():
         self.type = data['type']  # read or write
         self.address = data['address']
         self.size = data.get('size', default_size)
+        self.kind = data.get('kind', None)
 
     @property
     def address_hex(self):
@@ -21,7 +24,8 @@ class CacheAccess():
         return {
             'type': self.type,
             'address': self.address,
-            'size': self.size
+            'size': self.size,
+            'kind': self.kind,
         }
 
 
@@ -70,6 +74,16 @@ class CacheParameters(models.Model):
         tag = (address >> (self.offset_bits + self.index_bits))
         return (tag, index, offset)
 
+    def unsplit_address(self, tag, index, offset):
+        return (
+            (tag << (self.offset_bits + self.index_bits)) |
+            (index << self.offset_bits) |
+            offset
+        )
+
+    def drop_offset(self, address):
+        return address & ((~0) << self.offset_bits)
+    
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
     entry_list.sort(key=lambda e: e.lru)
@@ -99,9 +113,10 @@ class CacheState():
 
     def to_entries(self):
         return self.entries
-
-    def apply_access(self, access):
+    
+    def apply_access(self, access, dry_run=False):
         (tag, index, offset) = self.params.split_address(access.address)
+        logger.debug('apply_access(%x,%x,%x)', tag, index, offset)
         found = None
         entries_at_index = self.entries[index]
         was_hit = False
@@ -110,19 +125,29 @@ class CacheState():
                 found = possible
                 was_hit = True
                 break
+        evicted = None
         if found == None:
             # FIXME: record dirty flush here
             found = _get_lru(entries_at_index)
-            found.valid = True
-            found.tag = tag
-            if access.type == 'W':
-                found.dirty = True
-        _update_lru(entries_at_index, found)
+            if found.valid:
+                logger.debug('evicted %x', found.tag)
+                evicted = self.params.unsplit_address(found.tag, index, 0)
+            else:
+                logger.debug('no eviction')
+            if not dry_run:
+                found.valid = True
+                found.tag = tag
+        # FIXME: conditional on is_writeback?
+        if access.type == 'W':
+            found.dirty = True
+        if not dry_run:
+            _update_lru(entries_at_index, found)
         return {
             'hit': was_hit,
             'tag': tag,
             'index': index,
-            'offset': offset
+            'offset': offset,
+            'evicted': evicted
         }
 
     def to_json(self):
@@ -143,11 +168,18 @@ class CacheState():
         state = CacheState(params)
         state.entries = result
 
+# because random.choices isn't available until Python 3.6
+def _random_weighted(possibilities, weights):
+    cumulative_weights = list(itertools.accumulate(weights))
+    weight_index = random.random() * cumulative_weights[-1]
+    index = bisect.bisect_left(cumulative_weights, weight_index)
+    return possibilities[index]
+
 class CachePattern(models.Model):
     pattern_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     parameters = models.ForeignKey('CacheParameters', on_delete=models.PROTECT)
     access_size = models.IntegerField(default=2)
-    address_bits = models.IntegerField(default=6)
+    address_bits = models.IntegerField(default=8)
     # JSON list of cache accesses
     accesses_raw = models.TextField()
     _have_access_results = False
@@ -177,14 +209,89 @@ class CachePattern(models.Model):
             self._have_access_results = True
 
     @staticmethod
-    def generate_random(parameters, num_accesses=10):
+    def generate_random(parameters, num_accesses=10, access_size=2, address_size=8, chance_setup_conflict_aggressive=2, chance_setup_conflict=1, chance_conflict_miss=3, chance_hit=3, chance_normal_miss=1):
+        MAX_TRIES = 20
         result = CachePattern()
+        result.access_size = 2
+        result.address_size = address_size
         result.parameters = parameters
         accesses =  []
+        state = CacheState(parameters)
+        would_hit = set()
+        would_miss = set()
+        used_indices = set()
+        used_by_count = {}
+        tag_bits = result.address_bits - (parameters.offset_bits + parameters.index_bits)
+        offset_bits = parameters.offset_bits
         for i in range(num_accesses):
-            address = random.randrange(0, 1 << result.address_bits)
-            address &= ~(result.access_size - 1)
-            accesses.append(CacheAccess({'type':'R', 'address':address, 'size':result.access_size}))
+            possible = ['normal_miss']
+            possible_weights = [chance_normal_miss]
+            if len(would_hit) > 0:
+                possible.append('hit')
+                possible_weights.append(chance_hit)
+                possible.append('setup_conflict_aggressive')
+                possible_weights.append(chance_setup_conflict_aggressive)
+                possible.append('setup_conflict')
+                possible_weights.append(chance_setup_conflict)
+            if len(would_miss) > 0:
+                possible.append('conflict_miss')
+                possible_weights.append(chance_conflict_miss)
+            access_kind = _random_weighted(possible, possible_weights)
+            if access_kind == 'normal_miss':
+                for _ in range(MAX_TRIES):
+                    address = random.randrange(0, 1 << result.address_bits)
+                    address &= ~(result.access_size - 1)
+                    (_, index, _) = parameters.split_address(address)
+                    if not address in used_indices:
+                        break
+            elif access_kind == 'hit':
+                address = random.choice(list(would_hit))
+            elif access_kind == 'setup_conflict_aggressive':
+                best_count = None
+                for v in used_by_count.values():
+                    if best_count == None:
+                        best_count = v
+                    elif v > best_count or (v > 0 and best_count == parameters.num_ways):
+                        best_count = v
+                candidates = []
+                for k, v in used_by_count.items():
+                    if v == best_count:
+                        candidates.append(v)
+                base_address = random.choice(candidates)
+                (_, index, _) = parameters.split_address(address)
+                for _ in range(MAX_TRIES):
+                    new_tag = random.randrange(0, 1 << tag_bits)
+                    address = parameters.unsplit_address(new_tag, index, 0)
+                    if not (address in would_hit or address in would_miss):
+                        break
+            elif access_kind == 'setup_conflict':
+                base_address = random.choice(list(would_hit))
+                (_, index, _) = parameters.split_address(address)
+                for _ in range(MAX_TRIES):
+                    new_tag = random.randrange(0, 1 << tag_bits)
+                    address = parameters.unsplit_address(new_tag, index, 0)
+                    if not (address in would_hit or address in would_miss):
+                        break
+            elif access_kind == 'conflict_miss':
+                address = random.choice(list(would_miss))
+            else:
+                assert(False)
+            without_offset = parameters.drop_offset(address)
+            (_, index, _) = parameters.split_address(address)
+            new_offset = random.randrange(0, 1 << offset_bits) & ~(result.access_size - 1)
+            address = without_offset | new_offset
+            accesses.append(CacheAccess({'type':'R', 'address':address, 'size':result.access_size, 'kind': access_kind}))
+            access_result = state.apply_access(accesses[-1])
+            used_indices.add(index)
+            if index in used_by_count:
+                used_by_count[index] = max(used_by_count[index] + 1, parameters.num_ways)
+            else:
+                used_by_count[index] = 1
+            would_hit.add(without_offset)
+            would_miss.discard(without_offset)
+            if access_result['evicted'] != None:
+                would_miss.add(access_result['evicted'])
+                would_hit.discard(access_result['evicted'])
         result.accesses_raw = json.dumps(list(map(lambda a: a.as_dump(), accesses)))
         result.generate_results()
         result.save()
@@ -196,6 +303,7 @@ class PatternQuestion(models.Model):
     question_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     pattern = models.ForeignKey('CachePattern', on_delete=models.PROTECT)
     for_user = models.TextField()
+    ask_evict = models.BooleanField(default=True)
     index = models.IntegerField()
 
     @property
@@ -209,6 +317,10 @@ class PatternQuestion(models.Model):
     @property
     def index_bits(self):
         return self.pattern.parameters.index_bits
+
+    @property
+    def address_bits(self):
+        return self.pattern.address_bits
 
     @staticmethod
     def last_question_for_user(for_user):
