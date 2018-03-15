@@ -52,8 +52,8 @@ class CacheEntry():
 
 class CacheParameters(models.Model):
     num_ways = models.IntegerField(default=2)
-    num_indices = models.IntegerField(default=4)
-    entry_size = models.IntegerField(default=8)
+    num_sets = models.IntegerField(default=4)
+    block_size = models.IntegerField(default=8)
     # FIXME: is_writeback support
 
     @property
@@ -62,11 +62,22 @@ class CacheParameters(models.Model):
     
     @property
     def index_bits(self):
-        return int(math.log2(self.num_indices))
+        return int(math.log2(self.num_sets))
+
+    def tag_bits_for_address_bits(self, size):
+        return size - self.offset_bits - self.index_bits
+
+    @property
+    def set_size_bytes(self):
+        return self.num_ways * self.block_size
+
+    @property
+    def way_size_bytes(self):
+        return self.num_sets * self.block_size
 
     @property
     def cache_size_bytes(self):
-        return self.num_ways * self.num_indices * self.entry_size
+        return self.num_ways * self.num_sets * self.entry_size
 
     def split_address(self, address):
         offset = address & ~((~0) << self.offset_bits)
@@ -83,6 +94,100 @@ class CacheParameters(models.Model):
 
     def drop_offset(self, address):
         return address & ((~0) << self.offset_bits)
+
+
+all_cache_question_parameters = set([
+    'offset_bits',
+    'index_bits',
+    'tag_bits',
+    'cache_size_bytes',
+    'num_sets',
+    'num_ways',
+    'block_size',
+    'set_size_bytes',
+    'way_size_bytes',
+    'address_bits',
+])
+
+def _can_find_parameters_from(given_parts):
+    known_parts = given_parts
+    done = False
+    equations = [
+        set(['block_size', 'offset_bits']),
+        set(['index_bits', 'num_sets']),
+        set(['block_size', 'set_size_bytes', 'num_ways']),
+        set(['block_size', 'num_ways', 'num_sets', 'cache_size_bytes']),
+        set(['tag_bits', 'index_bits', 'offset_bits', 'address_bits']),
+    ]
+    while not done:
+        done = True
+        for equation in equations:
+            if len(known_parts & equation) == len(equation) - 1:
+                known_parts |= equation
+                done = False
+    return len(known_parts) == len(all_cache_question_parameters)
+
+def _all_subsets(lst):
+    iters = []
+    for i in range(len(lst)):
+        iters.append(itertools.combinations(lst, i))
+    return map(frozenset, itertools.chain(*iters))
+
+def _get_cache_givens_to_ask():
+    possible = set()
+    for givens in _all_subsets(list(all_cache_question_parameters)):
+        if _can_find_parameters_from(givens):
+            possible.add(givens)
+    filtered = set()
+    for givens in possible:
+        can_trim = False
+        for item in givens:
+            if givens - set([item]) in possible:
+                can_trim = True
+        if not can_trim:
+            filtered.add(givens)
+    logger.info('all_cache_given_sets = %s', filtered)
+    return filtered
+
+all_cache_given_sets = _get_cache_givens_to_ask()
+
+class ParameterQuestion(models.Model):
+    question_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    for_user = models.TextField()
+    address_bits= models.IntegerField()
+    parameters = models.ForeignKey('CacheParameters', on_delete=models.PROTECT)
+    missing_parts_raw = models.TextField()
+    given_parts_raw = models.TextField()
+
+    def get_missing_parts(self):
+        return json.loads(self.missing_parts_raw)
+    
+    def set_missing_parts(self, missing_parts):
+        missing_parts_raw = json.dumps(missing_parts)
+
+    missing_parts = property(get_missing_parts, set_missing_parts)
+
+    def get_given_parts(self):
+        return json.loads(self.given_parts_raw)
+    
+    def set_given_parts(self, given_parts):
+        given_parts_raw = json.dumps(given_parts)
+
+    given_parts = property(get_given_parts, set_given_parts)
+
+    def find_cache_property(self, name):
+        if name == 'tag_bits':
+            return self.parameters.tag_bits_for_address_bits(self.address_bits)
+        elif name == 'address_bits':
+            return self.address_bits
+        else:
+            return getattr(self.parameters, name)
+
+class ParameterAnswer(models.Model):
+    for_user = models.TextField()
+    question_id = models.ForeignKey('ParameterQuestion', on_delete=models.PROTECT)
+    submit_time = models.DateTimeField(auto_now=True,editable=False)
+    answer_raw = models.TextField()
     
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
@@ -98,7 +203,7 @@ class CacheState():
     def __init__(self, params):
         self.params = params
         entries = []
-        for index in range(params.num_indices):
+        for index in range(params.num_sets):
             entries.append([])
             for way in range(params.num_ways):
                 entries[-1].append(
