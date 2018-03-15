@@ -16,25 +16,12 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='PatternAnswer',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('access_results_raw', models.TextField()),
-                ('final_state_raw', models.TextField()),
-                ('score', models.IntegerField()),
-                ('submit_time', models.DateTimeField(auto_now=True)),
-                ('question', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='quiz.CacheQuestion')),
-                ('was_complete', models.BooleanField(default=False)),
-                ('for_user', models.TextField(default='test')),
-            ],
-        ),
-        migrations.CreateModel(
             name='CacheParameters',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('num_ways', models.IntegerField(default=2)),
                 ('num_indices', models.IntegerField(default=4)),
-                ('entry_size', models.IntegerField(default=4)),
+                ('entry_size', models.IntegerField(default=8)),
             ],
         ),
         migrations.CreateModel(
@@ -58,9 +45,18 @@ class Migration(migrations.Migration):
                 ('give_first', models.IntegerField(default=5)),
             ],
         ),
-        migrations.AlterField(
-            model_name='cacheparameters',
-            name='entry_size',
-            field=models.IntegerField(default=8),
+        migrations.CreateModel(
+            name='PatternAnswer',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('access_results_raw', models.TextField()),
+                ('final_state_raw', models.TextField()),
+                ('score', models.IntegerField()),
+                ('max_score', models.IntegerField()),
+                ('submit_time', models.DateTimeField(auto_now=True)),
+                ('question', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='quiz.PatternQuestion')),
+                ('was_complete', models.BooleanField(default=False)),
+                ('for_user', models.TextField(default='test')),
+            ],
         ),
     ]
