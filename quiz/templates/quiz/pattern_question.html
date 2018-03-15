@@ -41,6 +41,9 @@ Assuming the cache is <strong>initially empty</strong>.
 Then memory is accessed shown below. For each access, indicate how it is split into tag/index/offset, and whether it is a
 hit or miss. Write all address parts in <strong>hexadecimal</strong>.
 </p>
+<p>
+When identifying what address is evicted, write the address of the <strong>first byte of the evicted cache block</strong>.
+</p>
 {% if give_first > 0 %}
 <p>
 The first {{ give_first }} answers are given.
@@ -165,6 +168,10 @@ The first {{ give_first }} answers are given.
 </ul>
 <input type="submit" value="submit answers"
 {% if show_correct %} disabled {% endif %}
+>
+<input type="submit" value="save answers without submitting"
+{% if show_correct %} disabled {% endif %}
+        name="is_save" value="1"
 >
 </form>
 <h2>Expected result</h2>

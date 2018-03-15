@@ -106,7 +106,7 @@ def pattern_question_detail(request, question_id):
         'answer': answer,
         'accesses_with_default_and_correct_and_given': accesses_with_default,
         'show_correct': True if answer and answer.was_complete else False,
-        'show_invalid': True if answer and not answer.was_complete else False,
+        'show_invalid': True if answer and not answer.was_complete and not answer.was_save else False,
         'tag_width': widths,
         'offset_width': widths,
         'index_width': widths,
@@ -195,8 +195,10 @@ def pattern_answer(request, question_id):
     answer.access_results = submitted_results
     answer.for_user = request.user.get_username()
     answer.was_complete = is_complete
+    if request.POST.get('is_save'):
+        answer.was_save = True
     answer.save()
-    if answer.was_complete:
+    if answer.was_complete or answer.was_save:
         return redirect('user-index')
     elif PatternQuestion.last_question_for_user(request.user.get_username()) == question:
         return redirect('last-pattern-question')

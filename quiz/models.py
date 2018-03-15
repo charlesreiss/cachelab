@@ -371,6 +371,7 @@ class PatternAnswer(models.Model):
     score = models.IntegerField()
     max_score = models.IntegerField()
     was_complete = models.BooleanField(default=False)
+    was_save = models.BooleanField(default=False)
     submit_time = models.DateTimeField(auto_now=True,editable=False)
     for_user = models.TextField()
 
