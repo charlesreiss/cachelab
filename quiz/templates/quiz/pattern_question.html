@@ -150,10 +150,14 @@ The first {{ give_first }} answers are given.
                 {% endif %}
             {% if ask_evict %}
                 <!-- reset hit/miss -->
-                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_noevict').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked = false;  document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;">reset hit/miss</button>
+                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_noevict').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked = false;  document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                    {% if show_correct or is_given %} disabled {% endif %}
+                    >reset hit/miss</button>
             {% else %}
                 <!-- reset hit/miss -->
-                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss').checked = false; ">reset hit/miss</button>
+                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss').checked = false; "
+                    {% if show_correct or is_given %} disabled {% endif %}
+                    >reset hit/miss</button>
             {% endif %}
             </fieldset>
 {% endfor %}
