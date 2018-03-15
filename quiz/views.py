@@ -65,6 +65,14 @@ def new_pattern_question(request):
 def test_control(request):
     return HttpResponse(render(request, 'quiz/test_control.html', {}))
 
+def _convert_given_access_result(access_result):
+    result = access_result.copy()
+    for key in ['tag', 'index', 'offset', 'evicted']:
+        result[key + '_invalid'] = False
+        if result[key] != None:
+            result[key] = '0x{:x}'.format(result[key])
+    result['hit_invalid'] = False
+    return result
     
 def pattern_question_detail(request, question_id):
     question = PatternQuestion.objects.get(question_id=question_id)
@@ -90,12 +98,7 @@ def pattern_question_detail(request, question_id):
     else:
         old_answers = [empty_access] * len(question.pattern.accesses)
         for i in range(question.give_first):
-            old_answers[i] = question.pattern.access_results[i].copy()
-            for key in ['tag', 'index', 'offset', 'evicted']:
-                old_answers[i][key + '_invalid'] = False
-                if old_answers[i][key] != None:
-                    old_answers[i][key] = '0x{:x}'.format(old_answers[i][key])
-            old_answers[i]['hit_invalid'] = False
+            old_answers[i] = _convert_given_access_result(question.pattern.access_results[i])
         accesses_with_default = zip(question.pattern.accesses, old_answers, question.pattern.access_results, is_given)
     widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4)
     context = {
