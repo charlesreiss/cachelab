@@ -354,6 +354,14 @@ class PatternQuestion(models.Model):
         result.save()
         return result
 
+def _convert_value(x):
+    if x != None and (x.startswith('0x') or x.startswith('0X')):
+        x = x[2:]
+    try:
+        return hex(x)
+    except TypeError:
+        return None
+
 class PatternAnswer(models.Model):
     question = models.ForeignKey('PatternQuestion', on_delete=models.PROTECT)
     access_results_raw = models.TextField()
@@ -367,27 +375,27 @@ class PatternAnswer(models.Model):
     _access_results = None
 
     def get_access_results(self):
-        if self._access_results != None:
+        if self._access_results == None:
             self._access_results = json.loads(self.access_results_raw)
         return self._access_results 
         
 
     def set_access_results(self, value):
-        self._access_results = _score_answer(value)
+        self._access_results = self._score_answer(value)
         self.access_results_raw = json.dumps(self._access_results)
 
     access_results = property(get_access_results, set_access_results)
 
     def _score_answer(self, submitted_results):
-        expected_results = question.pattern.access_results
+        expected_results = self.question.pattern.access_results
         score = 0
         max_score = 0
         i = 0
         for submitted, expected in zip(submitted_results, expected_results):
-            if i >= question.give_first:
+            if i >= self.question.give_first:
                 max_score += 4
             if submitted['hit'] == expected['hit']:
-                if i >= question.give_first:
+                if i >= self.question.give_first:
                     score += 1
                 submitted['hit_correct'] = True
                 logger.debug("Setting hit_correct TRUE")
@@ -397,7 +405,7 @@ class PatternAnswer(models.Model):
             for which in ['tag', 'index', 'offset']:
                 if _convert_value(submitted[which]) == expected[which]:
                     submitted[which + '_correct'] = True
-                    if i >= question.give_first:
+                    if i >= self.question.give_first:
                         score += 1
                 else:
                     submitted[which + '_correct'] = False
@@ -421,7 +429,3 @@ class PatternAnswer(models.Model):
     @staticmethod
     def last_for_user(user):
         return PatternAnswer.objects.filter(for_user=user).order_by('-submit_time').first()
-
-    @property
-    def max_score(self):
-        return len(self.access_results) * 4
