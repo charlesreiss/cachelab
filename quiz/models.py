@@ -359,21 +359,69 @@ class PatternAnswer(models.Model):
     access_results_raw = models.TextField()
     final_state_raw = models.TextField()
     score = models.IntegerField()
+    max_score = models.IntegerField()
     was_complete = models.BooleanField(default=False)
     submit_time = models.DateTimeField(auto_now=True,editable=False)
+    for_user = models.TextField()
+
+    _access_results = None
 
     def get_access_results(self):
-        return json.loads(self.access_results_raw)
+        if self._access_results != None:
+            self._access_results = json.loads(self.access_results_raw)
+        return self._access_results 
+        
 
     def set_access_results(self, value):
-        self.access_results_raw = json.dumps(value)
+        self._access_results = _score_answer(value)
+        self.access_results_raw = json.dumps(self._access_results)
 
     access_results = property(get_access_results, set_access_results)
+
+    def _score_answer(self, submitted_results):
+        expected_results = question.pattern.access_results
+        score = 0
+        max_score = 0
+        i = 0
+        for submitted, expected in zip(submitted_results, expected_results):
+            if i >= question.give_first:
+                max_score += 4
+            if submitted['hit'] == expected['hit']:
+                if i >= question.give_first:
+                    score += 1
+                submitted['hit_correct'] = True
+                logger.debug("Setting hit_correct TRUE")
+            else:
+                submitted['hit_correct'] = False
+                logger.debug("Setting hit_correct FALSE")
+            for which in ['tag', 'index', 'offset']:
+                if _convert_value(submitted[which]) == expected[which]:
+                    submitted[which + '_correct'] = True
+                    if i >= question.give_first:
+                        score += 1
+                else:
+                    submitted[which + '_correct'] = False
+            i += 1
+        self.score = score
+        self.max_score = max_score
+        return submitted_results
 
     @staticmethod
     def last_for_question(question):
         return PatternAnswer.objects.filter(question=question).order_by('-submit_time').first()
 
+    @staticmethod
+    def best_complete_for_user(user):
+        return PatternAnswer.objects.filter(for_user=user,was_complete=True).order_by('-score').first()
+
+    @staticmethod
+    def num_complete_for_user(user):
+        return PatternAnswer.objects.filter(for_user=user,was_complete=True).count()
+
+    @staticmethod
+    def last_for_user(user):
+        return PatternAnswer.objects.filter(for_user=user).order_by('-submit_time').first()
+
     @property
     def max_score(self):
-        return len(self.access_results)
+        return len(self.access_results) * 4

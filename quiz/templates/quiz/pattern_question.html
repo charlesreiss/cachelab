@@ -1,13 +1,21 @@
 {% extends "quiz/base_generic.html" %}
 
+
 {% block title %}{% if show_correct %}CacheLab: access pattern quiz (results){% else %}CacheLab: access pattern quiz{% endif %}{% endblock %}
 
 {% load quiz_extras %}
 
 {% block content %}
+<h1>CacheLab: access pattern quiz</h1>
+<p>
+You are logged in as <strong>{{user}}</strong>.
+</p>
+
 {% if show_correct %}
+<p>
 Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points.<br />
 If you'd like to try again, you can <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button></form>
+</p>
 {% else %}
 {% endif %}
 

@@ -3,7 +3,7 @@ Necessary features:
         - TODO: timestamps on forwarded token
 
 Things to add:
-    - starting interface showing:
+    X starting interface showing:
         button to get a new question
         status of existing question
         previous score
@@ -19,7 +19,8 @@ Things to add:
         should allow for huge cache problems?
 
     - less sensitivity for evicted answer
-    - example answers for three (miss/hit/miss-evict)
+    X example answers for three (miss/hit/miss-evict)
+    - save answers button
 
 Also consider:
     - question with C code?

@@ -15,22 +15,51 @@ from .models import PatternAnswer, PatternQuestion, CachePattern, CacheParameter
 logger = logging.getLogger('cachelabweb')
 
 @login_required
-def quiz(request):
-    question = PatternQuestion.last_question_for_user(request.user.username)
+def last_pattern_question(request):
+    question = PatternQuestion.last_question_for_user(request.user.get_username())
     if not question:
-        # FIXME : use existing
-        parameters = CacheParameters()
-        parameters.save()
-        PatternQuestion.generate_random(parameters=parameters, for_user=request.user.username)
-        question = PatternQuestion.last_question_for_user('test')
+        parameters = CacheParameters.objects.first()
+        if parameters == None:
+            parameters = CacheParameters()
+            parameters.save()
+        PatternQuestion.generate_random(parameters=parameters, for_user=request.user.get_username())
+        question = PatternQuestion.last_question_for_user(request.user.get_username())
     return pattern_question_detail(request, PatternQuestion.last_question_for_user(request.user.username).question_id)
+
+@login_required
+def index_page(request):
+    user = request.user.get_username()
+    last_pattern_answer = PatternAnswer.last_for_user(user)
+    if last_pattern_answer != None:
+        last_in_progress = not last_pattern_answer.was_complete
+    else:
+        last_in_progress = False
+    num_pattern_answer = PatternAnswer.num_complete_for_user(user)
+    if num_pattern_answer > 0:
+        best_pattern_answer = PatternAnswer.best_complete_for_user()
+        pattern_score = best_pattern_answer.score
+        pattern_max_score = best_pattern_answer.max_score
+    else:
+        pattern_score = None
+        pattern_max_score = None
+    context = {
+        'user': request.user.get_username(),
+        'pattern_complete': num_pattern_answer,
+        'pattern_in_progress': last_in_progress,
+        'pattern_score': pattern_score,
+        'pattern_max_score': pattern_max_score,
+    }
+    return HttpResponse(render(request, 'quiz/user_index.html', {}))
 
 @login_required
 @require_http_methods(["POST"])
 def new_pattern_question(request):
-    name = 'test'
-    PatternQuestion.generate_random(parameters=CacheParameters.objects.first(), for_user='test')
-    return redirect('quiz')
+    parameters = CacheParameters.objects.first()
+    if parameters == None:
+        parameters = CacheParameters()
+        parameters.save()
+    PatternQuestion.generate_random(parameters=parameters, for_user=request.user.get_username())
+    return redirect('last-pattern-question')
 
 # FIXME: @permission_required('quiz.delete_patternquestion')
 def test_control(request):
@@ -81,6 +110,7 @@ def pattern_question_detail(request, question_id):
         'ask_evict': question.ask_evict,
         'give_first': question.give_first,
         'debug_enable': False,
+        'user': request.user.get_username(),
     }
     return HttpResponse(render(request, 'quiz/pattern_question.html', context))
 
@@ -99,7 +129,6 @@ def pattern_answer(request, question_id):
         return HttpResponse("You already submitted an answer to this question.")
     answer = PatternAnswer()
     answer.question = question
-    expected_results = question.pattern.access_results
     submitted_results = []
     is_complete = True
     parts = ['tag', 'index', 'offset']
@@ -150,28 +179,9 @@ def pattern_answer(request, question_id):
                 cur_access['evicted_invalid'] = TRue
                 is_complete = False
         submitted_results.append(cur_access)
-    score = 0
-    i = 0
-    for submitted, expected in zip(submitted_results, expected_results):
-        if submitted['hit'] == expected['hit']:
-            if i >= question.give_first:
-                score += 1
-            submitted['hit_correct'] = True
-            logger.debug("Setting hit_correct TRUE")
-        else:
-            submitted['hit_correct'] = False
-            logger.debug("Setting hit_correct FALSE")
-        for which in ['tag', 'index', 'offset']:
-            if _convert_value(submitted[which]) == expected[which]:
-                submitted[which + '_correct'] = True
-                if i >= question.give_first:
-                    score += 1
-            else:
-                submitted[which + '_correct'] = False
-        i += 1
     answer.access_results = submitted_results
+    answer.user = request.user.get_username()
     answer.was_complete = is_complete
-    answer.score = score
     answer.save()
     return redirect('quiz')
 
