@@ -1,0 +1,30 @@
+{% extends "quiz/base_generic.html" %}
+
+{% block title %}Index for {{user}}{% endblock %}
+
+{% block content %}
+<h1>CacheLab: access pattern quiz index</h1>
+
+<p>
+You are logged in as {{user}}.
+</p>
+
+<h2>Cache Pattern Access Pattern</h2>
+
+{% if pattern_complete > 0 %}
+<p>
+You have answered {{ pattern_complete }} cache access pattern questions. Your best score is {{ pattern_score }}/{{ pattern_max_score }}.
+You can review your <a href="{% url 'last-pattern-question' %}">last answer</a>.
+</p>
+{% endif %}
+
+{% if pattern_in_progress %}
+<p>
+You have a cache pattern question in progress that you can <a href="{% url 'pattern-question' %}">continue working on by clicking here</a>.
+</p>
+{% else %}
+<p>
+<form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a cache pattern question</button></form>
+</p>
+{% endif %}
+{% endblock %}
