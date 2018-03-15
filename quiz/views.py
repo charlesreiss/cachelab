@@ -197,6 +197,7 @@ def pattern_answer(request, question_id):
     answer.was_complete = is_complete
     if request.POST.get('is_save'):
         answer.was_save = True
+        answer.was_complete = False
     answer.save()
     if answer.was_complete or answer.was_save:
         return redirect('user-index')
