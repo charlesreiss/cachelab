@@ -354,12 +354,14 @@ class PatternQuestion(models.Model):
         result.save()
         return result
 
-def _convert_value(x):
+def value_from_hex(x):
     if x != None and (x.startswith('0x') or x.startswith('0X')):
         x = x[2:]
     try:
-        return hex(x)
+        return int(x, 16)
     except TypeError:
+        return None
+    except ValueError:
         return None
 
 class PatternAnswer(models.Model):
@@ -403,7 +405,7 @@ class PatternAnswer(models.Model):
                 submitted['hit_correct'] = False
                 logger.debug("Setting hit_correct FALSE")
             for which in ['tag', 'index', 'offset']:
-                if _convert_value(submitted[which]) == expected[which]:
+                if value_from_hex(submitted[which]) == expected[which]:
                     submitted[which + '_correct'] = True
                     if i >= self.question.give_first:
                         score += 1
