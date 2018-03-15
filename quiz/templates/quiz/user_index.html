@@ -20,11 +20,12 @@ You can review your <a href="{% url 'last-pattern-question' %}">last answer</a>.
 
 {% if pattern_in_progress %}
 <p>
-You have a cache pattern question in progress that you can <a href="{% url 'pattern-question' %}">continue working on by clicking here</a>.
+You have a cache pattern question in progress that you can <a href="{% url 'last-pattern-question' %}">continue working on by clicking here</a>.
 </p>
 {% else %}
 <p>
 <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a cache pattern question</button></form>
 </p>
 {% endif %}
+
 {% endblock %}

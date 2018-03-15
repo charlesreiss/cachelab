@@ -93,7 +93,7 @@ The first {{ give_first }} answers are given.
                  correct answer: <tt>{% format_hex actual_answer.offset question.offset_bits  %}</tt>)
             {% endif %}
             <!-- hit/miss -->
-            <fieldset {% if show_invalid and old_answer.hit_invalid %}class="missing"{% endif %}>
+            <fieldset {% if show_invalid and old_answer.hit_invalid and not is_given %}class="missing"{% endif %}>
                 <!-- is hit? -->
                 <input type="radio" id="access_hit_{{ forloop.counter0 }}_ishit" name="access_hit_{{ forloop.counter0 }}" value="hit"
                     {% if not old_answer.hit_invalid and old_answer.hit == True %} checked {% endif %}

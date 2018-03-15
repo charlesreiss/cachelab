@@ -49,7 +49,7 @@ def index_page(request):
         'pattern_score': pattern_score,
         'pattern_max_score': pattern_max_score,
     }
-    return HttpResponse(render(request, 'quiz/user_index.html', {}))
+    return HttpResponse(render(request, 'quiz/user_index.html', context))
 
 @login_required
 @require_http_methods(["POST"])
@@ -114,11 +114,13 @@ def pattern_question_detail(request, question_id):
     }
     return HttpResponse(render(request, 'quiz/pattern_question.html', context))
 
-def _convert_value(x):
+def value_from_hex(x):
     if x != None and (x.startswith('0x') or x.startswith('0X')):
         x = x[2:]
     try:
-        return hex(x)
+        return int(x, 16)
+    except ValueError:
+        return None
     except TypeError:
         return None
 
@@ -134,7 +136,10 @@ def pattern_answer(request, question_id):
     parts = ['tag', 'index', 'offset']
     if question.ask_evict:
         parts.append('evicted')
-    for i in range(len(expected_results)):
+    logger.debug('POST request is %s', request.POST)
+    for i in range(question.give_first):
+        submitted_results.append(_convert_given_access_result(question.pattern.access_results[i]))
+    for i in range(question.give_first, len(question.pattern.access_results)):
         cur_access = {
             'hit': False,
             'tag': None,
@@ -160,12 +165,16 @@ def pattern_answer(request, question_id):
             if key in request.POST:
                 value = request.POST[key].strip()
                 cur_access[which] = value
-                if _convert_value(value) == None:
+                if value_from_hex(value) == None:
+                    logger.debug('%s invalid ; %s -> %s', which, value, value_from_hex(value))
                     cur_access[which + '_invalid'] = True
                     is_complete = False
                 else:
+                    logger.debug('%s valid??', which)
                     cur_access[which + '_invalid'] = False
             else:
+                logger.error('did not find key %s', key)
+                cur_access[which  + '_invalid'] = True
                 is_complete = False
         if hit_value != 'miss-evict':
             cur_access['evicted'] = None
@@ -175,15 +184,21 @@ def pattern_answer(request, question_id):
                 cur_access['evicted'] = ''
                 cur_access['evicted_invalid'] = True
                 is_complete = False
-            elif _convert_value(cur_access['evicted']) == None:
-                cur_access['evicted_invalid'] = TRue
+            elif value_from_hex(cur_access['evicted']) == None:
+                cur_access['evicted_invalid'] = True
                 is_complete = False
+        logger.debug('adding access %s', cur_access)
         submitted_results.append(cur_access)
     answer.access_results = submitted_results
-    answer.user = request.user.get_username()
+    answer.for_user = request.user.get_username()
     answer.was_complete = is_complete
     answer.save()
-    return redirect('quiz')
+    if answer.was_complete:
+        return redirect('user-index')
+    elif PatternQuestion.last_question_for_user(request.user.get_username()) == question:
+        return redirect('last-pattern-question')
+    else:
+        return redirect('pattern-question', question.question_id)
 
 # FIXME: make admin only
 @require_http_methods(["POST"])
