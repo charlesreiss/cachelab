@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import permission_required, login_required
 
-from .models import PatternAnswer, PatternQuestion, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer
+from .models import PatternAnswer, PatternQuestion, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, all_cache_question_parameters
 
 logger = logging.getLogger('cachelabweb')
 
@@ -19,13 +19,11 @@ logger = logging.getLogger('cachelabweb')
 def last_pattern_question(request):
     question = PatternQuestion.last_question_for_user(request.user.get_username())
     if not question:
-        parameters = CacheParameters.objects.first()
-        if parameters == None:
-            parameters = CacheParameters()
-            parameters.save()
+        parameters = CacheParameters()
+        parameters.save()
         PatternQuestion.generate_random(parameters=parameters, for_user=request.user.get_username())
         question = PatternQuestion.last_question_for_user(request.user.get_username())
-    return pattern_question_detail(request, PatternQuestion.last_question_for_user(request.user.username).question_id)
+    return pattern_question_detail(request, question.question_id)
 
 @login_required
 def index_page(request):
@@ -174,7 +172,6 @@ def pattern_answer(request, question_id):
                 value = request.POST[key].strip()
                 cur_access[which] = value
                 if value_from_hex(value) == None:
-                    logger.debug('%s invalid ; %s -> %s', which, value, value_from_hex(value))
                     cur_access[which + '_invalid'] = True
                     is_complete = False
                 else:
@@ -213,19 +210,29 @@ def pattern_answer(request, question_id):
 
 def _name_parameter(parameter):
     if parameter.startswith('num_'):
-        return 'Number of ' + paramater[len('num_'):]
+        return 'number of ' + parameter[len('num_'):]
     elif parameter.endswith('_bits'):
-        return parameter[:-len('_bits'] + ' bits'
+        return parameter[:-len('_bits')] + ' bits'
     elif parameter == 'way_size_bytes':
-        return 'Total bytes per way'
+        return 'total bytes per way'
     elif parameter == 'set_size_bytes':
-        return 'Total data bytes per set'
+        return 'total data bytes per set'
     elif parameter.endswith('_bytes'):
-        return parameter[:-len('_bytes'].replace('_', ' ') + ' (bytes)'
+        return parameter[:-len('_bytes')].replace('_', ' ') + ' (bytes)'
     elif parameter == 'block_size':
-        return 'Block size (bytes)',
+        return 'block size (bytes)'
     else:
         return parameter
+
+def format_value_with_postfix(value):
+    if value > 1024 * 1024 * 1024 and value % (1024 * 1024 * 1024) == 0:
+        return '%dG' % (value / (1024 * 1024 * 1024))
+    elif value > 1024 * 1024 and value % (1024 * 1024) == 0:
+        return '%dM' % (value / (1024 * 1024))
+    elif value > 1024 and value % (1024) == 0:
+        return '%dK' % (value / (1024))
+    else:
+        return '%d' % (value)
 
 @login_required
 def parameter_question_detail(request, question_id):
@@ -234,30 +241,63 @@ def parameter_question_detail(request, question_id):
         raise PermissionDenied()
     last_answer = ParameterAnswer.last_for_question(question)
     params = []
-    mark_invalid = last_answer.was_complete and not last_answer.was_save
+    if last_answer:
+        mark_invalid = last_answer.was_complete and not last_answer.was_save
+        show_correct = last_answer.was_complete
+    else:
+        mark_invalid = False
+        show_correct = False
     for item in all_cache_question_parameters:
         if item in question.given_parts:
-            value = question.find_cache_property(item)
+            value = format_value_with_postfix(question.find_cache_property(item))
             correct_p = False
             invalid_p = True
+            given_p = True
         elif item in question.missing_parts:
-            value = last_answer.answer.get(item) if last_answer != None else ''
-            correct_p = last_answer.answer.get(item + '_correct')
-            invalid_p = last_answer.answer.get(item + '_invalid')
+            if last_answer:
+                value = last_answer.answer.get(item, '')
+                correct_p = last_answer.answer.get(item + '_correct', False)
+                invalid_p = last_answer.answer.get(item + '_invalid', True)
+            else:
+                value = ''
+                correct_p = False
+                invalid_p = False
+            given_p = False
         current = {
             'id': item,
             'name': _name_parameter(item),
             'value': value,
             'correct': correct_p,
             'invalid': invalid_p,
+            'given': given_p,
         }
         params.append(current)
     context = {
-        'was_invalid': mark_invalid,
+        'show_correct': show_correct,
+        'mark_invalid': mark_invalid,
         'params': params,
+        'question': question,
+        'answer': last_answer,
     }
     return HttpResponse(render(request, 'quiz/parameter_question.html', context))
 
+@login_required
+@require_http_methods(["POST"])
+def parameter_answer(request, question_id):
+    return HttpResponse("not implemented")
+
+@login_required
+@require_http_methods(["POST"])
+def new_parameter_question(request):
+    question = ParameterQuestion.generate_new(request.user.get_username())
+    return redirect('last-parameter-question')
+
+@login_required
+def last_parameter_question(request):
+    question = ParameterQuestion.last_question_for_user(request.user.get_username())
+    if not question:
+        question = ParameterQuestion.generate_new(request.user.get_username())
+    return parameter_question_detail(request, question.question_id)
 
 # FIXME: make admin only
 @require_http_methods(["POST"])
@@ -266,6 +306,8 @@ def clear_all_questions(request):
     if PatternQuestion.objects.filter(~Q(for_user__exact='guest') & ~Q(for_user__exact='test')).count() == 0:
         PatternAnswer.objects.all().delete()
         PatternQuestion.objects.all().delete()
+        ParameterAnswer.objects.all().delete()
+        ParameterQuestion.objects.all().delete()
         CachePattern.objects.all().delete()
         CacheParameters.objects.all().delete()
         return HttpResponse("Cleared all questions.")

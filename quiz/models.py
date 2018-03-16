@@ -58,7 +58,7 @@ class CacheParameters(models.Model):
 
     @property
     def offset_bits(self):
-        return int(math.log2(self.entry_size))
+        return int(math.log2(self.block_size))
     
     @property
     def index_bits(self):
@@ -77,7 +77,7 @@ class CacheParameters(models.Model):
 
     @property
     def cache_size_bytes(self):
-        return self.num_ways * self.num_sets * self.entry_size
+        return self.num_ways * self.num_sets * self.block_size
 
     def split_address(self, address):
         offset = address & ~((~0) << self.offset_bits)
@@ -94,6 +94,31 @@ class CacheParameters(models.Model):
 
     def drop_offset(self, address):
         return address & ((~0) << self.offset_bits)
+
+
+    @staticmethod
+    def get(num_ways, num_sets, block_size):
+        possible = CacheParameters.objects.filter(
+            num_ways=num_ways,
+            num_sets=num_sets,
+            block_size=block_size
+        )
+        if len(possible) == 0:
+            result = CacheParameters()
+            result.num_ways = num_ways
+            result.num_sets = num_sets
+            result.block_size = block_size
+            result.save()
+            return result
+        else:
+            return possible[0]
+
+    @staticmethod
+    def random(min_ways=1, max_ways=32, min_sets_log=0, max_sets_log=24, min_block_size_log=0, max_block_size_log=10):
+        num_ways = random.randint(min_ways, max_ways)
+        num_sets = 1 << random.randint(min_sets_log, max_sets_log)
+        block_size = 1 << random.randint(min_block_size_log, max_block_size_log)
+        return CacheParameters.get(num_ways=num_ways, num_sets=num_sets, block_size=block_size)
 
 
 
@@ -148,7 +173,7 @@ def _get_cache_givens_to_ask():
         if not can_trim:
             filtered.add(givens)
     logger.info('all_cache_given_sets = %s', filtered)
-    return filtered
+    return list(filtered)
 
 all_cache_given_sets = _get_cache_givens_to_ask()
 
@@ -159,6 +184,7 @@ class ParameterQuestion(models.Model):
     parameters = models.ForeignKey('CacheParameters', on_delete=models.PROTECT)
     missing_parts_raw = models.TextField()
     given_parts_raw = models.TextField()
+    index = models.IntegerField()
 
     def get_missing_parts(self):
         return json.loads(self.missing_parts_raw)
@@ -183,6 +209,29 @@ class ParameterQuestion(models.Model):
             return self.address_bits
         else:
             return getattr(self.parameters, name)
+   
+    @staticmethod
+    def generate_new(for_user):
+        which_given = list(random.choice(all_cache_given_sets))
+        which_parameters = CacheParameters.random()
+        q = ParameterQuestion()
+        last_question = ParameterQuestion.last_question_for_user(for_user)
+        if last_question != None:
+            q.index = last_question.index + 1
+        else:
+            q.index = 0
+        q.for_user = for_user
+        q.parameters = which_parameters
+        q.given_parts = which_given
+        q.missing_parts = list(filter(lambda x: x not in which_given, all_cache_question_parameters))
+        q.address_bits = q.parameters.offset_bits + q.parameters.index_bits + random.randint(1, 24)
+        q.save()
+        return q
+
+    @staticmethod
+    def last_question_for_user(for_user):
+        return ParameterQuestion.objects.filter(for_user__exact=for_user).order_by('-index').first()    
+
 
 class ParameterAnswer(models.Model):
     for_user = models.TextField()
@@ -213,6 +262,10 @@ class ParameterAnswer(models.Model):
             self.answer[item  + '_correct'] = correct_p
             if correct_p:
                 score += 1
+
+    @staticmethod
+    def last_for_question(question):
+        return ParameterAnswer.objects.filter(question=question).order_by('-submit_time').first()
     
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
@@ -494,7 +547,24 @@ def value_from_hex(x):
     except ValueError:
         return None
 
+sizes = {
+        'k': 1024,
+        'm': 1024 * 1024,
+        'g': 1024 * 1024 * 1024,
+        't': 1024 * 1024 * 1024 * 1024,
+        }
+
 def value_from_any(x):
+    x = x.tolower().trim()
+    if x[-1] == 'b':
+        x = x[:-1]
+    if x[-1] in sizes:
+        try:
+            return int(x[:-1].trim())
+        except TypeError:
+            return None
+        except ValueError:
+            return None
     try:
         return int(x)
     except TypeError:
