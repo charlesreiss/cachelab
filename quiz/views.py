@@ -76,6 +76,8 @@ def _convert_given_access_result(access_result):
     
 def pattern_question_detail(request, question_id):
     question = PatternQuestion.objects.get(question_id=question_id)
+    if question.for_user != request.user.get_username():
+        raise PermissionDenied()
     answer = PatternAnswer.last_for_question(question)
     empty_access = {
         'hit': None,
@@ -129,6 +131,8 @@ def value_from_hex(x):
 
 def pattern_answer(request, question_id):
     question = get_object_or_404(PatternQuestion, question_id=question_id)
+    if question.for_user != request.user.get_username():
+        raise PermissionDenied()
     last_answer = PatternAnswer.last_for_question(question)
     if last_answer and last_answer.was_complete:  # FIXME: threshold?
         return HttpResponse("You already submitted an answer to this question.")
