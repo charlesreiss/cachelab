@@ -4,13 +4,14 @@ import logging
 
 from django import template
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import permission_required, login_required
 
-from .models import PatternAnswer, PatternQuestion, CachePattern, CacheParameters
+from .models import PatternAnswer, PatternQuestion, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer
 
 logger = logging.getLogger('cachelabweb')
 
@@ -210,6 +211,54 @@ def pattern_answer(request, question_id):
     else:
         return redirect('pattern-question', question.question_id)
 
+def _name_parameter(parameter):
+    if parameter.startswith('num_'):
+        return 'Number of ' + paramater[len('num_'):]
+    elif parameter.endswith('_bits'):
+        return parameter[:-len('_bits'] + ' bits'
+    elif parameter == 'way_size_bytes':
+        return 'Total bytes per way'
+    elif parameter == 'set_size_bytes':
+        return 'Total data bytes per set'
+    elif parameter.endswith('_bytes'):
+        return parameter[:-len('_bytes'].replace('_', ' ') + ' (bytes)'
+    elif parameter == 'block_size':
+        return 'Block size (bytes)',
+    else:
+        return parameter
+
+@login_required
+def parameter_question_detail(request, question_id):
+    question = get_object_or_404(ParameterQuestion, question_id=question_id)
+    if question.for_user != request.user.get_username():
+        raise PermissionDenied()
+    last_answer = ParameterAnswer.last_for_question(question)
+    params = []
+    mark_invalid = last_answer.was_complete and not last_answer.was_save
+    for item in all_cache_question_parameters:
+        if item in question.given_parts:
+            value = question.find_cache_property(item)
+            correct_p = False
+            invalid_p = True
+        elif item in question.missing_parts:
+            value = last_answer.answer.get(item) if last_answer != None else ''
+            correct_p = last_answer.answer.get(item + '_correct')
+            invalid_p = last_answer.answer.get(item + '_invalid')
+        current = {
+            'id': item,
+            'name': _name_parameter(item),
+            'value': value,
+            'correct': correct_p,
+            'invalid': invalid_p,
+        }
+        params.append(current)
+    context = {
+        'was_invalid': mark_invalid,
+        'params': params,
+    }
+    return HttpResponse(render(request, 'quiz/parameter_question.html', context))
+
+
 # FIXME: make admin only
 @require_http_methods(["POST"])
 #@permission_required('quiz.delete_patternquestion')
@@ -222,4 +271,3 @@ def clear_all_questions(request):
         return HttpResponse("Cleared all questions.")
     else:
         return HttpResponse("Refusing to clear all questions.")
-

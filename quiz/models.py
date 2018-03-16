@@ -96,10 +96,11 @@ class CacheParameters(models.Model):
         return address & ((~0) << self.offset_bits)
 
 
-all_cache_question_parameters = set([
-    'offset_bits',
+
+all_cache_question_parameters = [
     'index_bits',
     'tag_bits',
+    'offset_bits',
     'cache_size_bytes',
     'num_sets',
     'num_ways',
@@ -107,7 +108,7 @@ all_cache_question_parameters = set([
     'set_size_bytes',
     'way_size_bytes',
     'address_bits',
-])
+]
 
 def _can_find_parameters_from(given_parts):
     known_parts = given_parts
@@ -135,7 +136,7 @@ def _all_subsets(lst):
 
 def _get_cache_givens_to_ask():
     possible = set()
-    for givens in _all_subsets(list(all_cache_question_parameters)):
+    for givens in _all_subsets(all_cache_question_parameters):
         if _can_find_parameters_from(givens):
             possible.add(givens)
     filtered = set()
@@ -154,7 +155,7 @@ all_cache_given_sets = _get_cache_givens_to_ask()
 class ParameterQuestion(models.Model):
     question_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     for_user = models.TextField()
-    address_bits= models.IntegerField()
+    address_bits = models.IntegerField()
     parameters = models.ForeignKey('CacheParameters', on_delete=models.PROTECT)
     missing_parts_raw = models.TextField()
     given_parts_raw = models.TextField()
@@ -163,7 +164,7 @@ class ParameterQuestion(models.Model):
         return json.loads(self.missing_parts_raw)
     
     def set_missing_parts(self, missing_parts):
-        missing_parts_raw = json.dumps(missing_parts)
+        self.missing_parts_raw = json.dumps(missing_parts)
 
     missing_parts = property(get_missing_parts, set_missing_parts)
 
@@ -171,7 +172,7 @@ class ParameterQuestion(models.Model):
         return json.loads(self.given_parts_raw)
     
     def set_given_parts(self, given_parts):
-        given_parts_raw = json.dumps(given_parts)
+        self.given_parts_raw = json.dumps(given_parts)
 
     given_parts = property(get_given_parts, set_given_parts)
 
@@ -185,9 +186,33 @@ class ParameterQuestion(models.Model):
 
 class ParameterAnswer(models.Model):
     for_user = models.TextField()
-    question_id = models.ForeignKey('ParameterQuestion', on_delete=models.PROTECT)
+    question = models.ForeignKey('ParameterQuestion', on_delete=models.PROTECT)
     submit_time = models.DateTimeField(auto_now=True,editable=False)
     answer_raw = models.TextField()
+    was_complete = models.BooleanField()
+
+    def set_answer(self, answer):
+        self._answer = _score_answer(answer)
+        self.answer_raw = json.dumps(_score_answer(answer))
+
+    def get_answer(self):
+        if not self._answer:
+            self._answer = json.loads(self.answer_raw)
+        return self._answer
+
+    answer = property(get_answer, set_answer)
+
+    def _score_answer(self, answer):
+        score = 0
+        max_score = 0
+        for item in self.question.missing_parts:
+            max_score += 1
+            invalid_p = value_from_any(self.answer.get(item)) == None
+            correct_p = value_from_any(self.answer.get(item)) == self.question.find_cache_property(item)
+            self.answer[item + '_invalid'] = invalid_p
+            self.answer[item  + '_correct'] = correct_p
+            if correct_p:
+                score += 1
     
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
@@ -464,6 +489,14 @@ def value_from_hex(x):
         x = x[2:]
     try:
         return int(x, 16)
+    except TypeError:
+        return None
+    except ValueError:
+        return None
+
+def value_from_any(x):
+    try:
+        return int(x)
     except TypeError:
         return None
     except ValueError:
