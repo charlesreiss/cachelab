@@ -1,0 +1,52 @@
+{% extends "quiz/base_generic.html" %}
+
+
+{% block title %}{% if show_correct %}CacheLab: cache parameter question (results){% else %}CacheLab: access pattern question{% endif %}{% endblock %}
+
+{% block content %}
+<h1>CacheLab: cache parameter question</h1>
+<p>
+You are logged in as <strong>{{user}}</strong>.
+</p>
+
+{% if mark_invalid %}
+Some of your answers were missing or misformatted. They are shown with <span class="missing">red</span> below.
+{% endif %}
+
+{% if show_correct %}
+You got a score of {{answer.score}} out of {{answer.max_score}} on this question at {{answer.submit_time}}.
+You can <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-parameter-quesiton' %}">get a new question</button></form>
+{% endif %}
+
+<form method="POST" action="{% url 'parameter-answer' question.question_id %}">{% csrf_token %}
+<p>
+Fill in the missing cache parameters below.
+Please enter values in <b>base-10</b>. However, you may use the suffices <i>K</i> (for 2 to the 10th), <i>M</i> (for 2 to the 20th), <i>G</i>, and <i>T</i>. For example, to represent then number <tt>32768</tt>, you can enter
+either <tt>32K</tt> or <tt>32768</tt>.
+<table>
+{% for row in params %}
+    {% if row.given %}
+    <tr>
+        <td class="paramLabel">{{row.name}}:</td>
+        <td><tt class="givenanswer">{{row.value}}</tt></td>
+    </tr>
+    {% else %}
+    <tr 
+        {% if mark_invalid and invalid %}
+        class="missing"
+        {% endif %}
+    >
+        <td class="paramLabel"><label for="{{row.id}}">{{ row.name }}:</label></td>
+        <td><input 
+            {% if show_correct %} disabled {% endif %}
+            type="text" id="{{row.id}}" value="{{row.value}}" name="{{row.name}}"></td>
+    </tr>
+    {% endif %}
+{% endfor %}
+</table>
+<input type="submit" value="submit answers" {% if show_correct %} disabled {% endif %}>
+<input type="submit" value="save answers without submitting"
+                                              name="is_save" 
+                                            {% if show_correct %} disabled {% endif %}
+                                              >
+{% endblock %}
