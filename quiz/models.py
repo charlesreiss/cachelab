@@ -54,6 +54,7 @@ class CacheParameters(models.Model):
     num_ways = models.IntegerField(default=2)
     num_sets = models.IntegerField(default=4)
     block_size = models.IntegerField(default=8)
+    address_bits = models.IntegerField(default=8)
     # FIXME: is_writeback support
 
     @property
@@ -64,8 +65,9 @@ class CacheParameters(models.Model):
     def index_bits(self):
         return int(math.log2(self.num_sets))
 
-    def tag_bits_for_address_bits(self, size):
-        return size - self.offset_bits - self.index_bits
+    @property
+    def tag_bits(self, size):
+        return self.address_bits - self.offset_bits - self.index_bits
 
     @property
     def set_size_bytes(self):
@@ -97,28 +99,45 @@ class CacheParameters(models.Model):
 
 
     @staticmethod
-    def get(num_ways, num_sets, block_size):
+    def get(num_ways, num_sets, block_size, address_bits):
         possible = CacheParameters.objects.filter(
             num_ways=num_ways,
             num_sets=num_sets,
-            block_size=block_size
+            block_size=block_size,
+            address_bits=address_bits,
         )
         if len(possible) == 0:
             result = CacheParameters()
             result.num_ways = num_ways
             result.num_sets = num_sets
             result.block_size = block_size
+            result.address_bits = address_bits
             result.save()
             return result
         else:
             return possible[0]
 
     @staticmethod
-    def random(min_ways=1, max_ways=32, min_sets_log=0, max_sets_log=24, min_block_size_log=0, max_block_size_log=10):
+    def random(
+            min_ways=1, max_ways=32, min_sets_log=0,
+            max_sets_log=24, min_block_size_log=0,
+            max_block_size_log=10,
+            min_address_bits=8,
+            max_address_bits=64,
+            address_bits_rounding=8,
+            min_tag_bits=1):
         num_ways = random.randint(min_ways, max_ways)
-        num_sets = 1 << random.randint(min_sets_log, max_sets_log)
-        block_size = 1 << random.randint(min_block_size_log, max_block_size_log)
-        return CacheParameters.get(num_ways=num_ways, num_sets=num_sets, block_size=block_size)
+        way_bits = int(math.log2(num_ways)) + 1
+        index_bits = random.randint(min_sets_log, max_sets_log)
+        num_sets = 1 << index_bits
+        offset_bits = random.randint(min_block_size_log, max_block_size_log)
+        block_size = 1 << offset_bits
+        min_tag_bits = max(min_tag_bits, way_bits)
+        min_address_bits = max(min_address_bits, index_bits + offset_bits + min_tag_bits)
+        address_bits = random.randint(min_address_bits, max_address_bits)
+        if address_bits % address_bits_rounding > 0:
+            address_bits += address_bits_rounding - (address_bits % address_bits_rounding)
+        return CacheParameters.get(num_ways=num_ways, num_sets=num_sets, block_size=block_size, address_bits=address_bits)
 
 
 
@@ -180,7 +199,6 @@ all_cache_given_sets = _get_cache_givens_to_ask()
 class ParameterQuestion(models.Model):
     question_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     for_user = models.TextField()
-    address_bits = models.IntegerField()
     parameters = models.ForeignKey('CacheParameters', on_delete=models.PROTECT)
     missing_parts_raw = models.TextField()
     given_parts_raw = models.TextField()
@@ -205,8 +223,6 @@ class ParameterQuestion(models.Model):
     def find_cache_property(self, name):
         if name == 'tag_bits':
             return self.parameters.tag_bits_for_address_bits(self.address_bits)
-        elif name == 'address_bits':
-            return self.address_bits
         else:
             return getattr(self.parameters, name)
    
@@ -224,7 +240,6 @@ class ParameterQuestion(models.Model):
         q.parameters = which_parameters
         q.given_parts = which_given
         q.missing_parts = list(filter(lambda x: x not in which_given, all_cache_question_parameters))
-        q.address_bits = q.parameters.offset_bits + q.parameters.index_bits + random.randint(1, 24)
         q.save()
         return q
 
@@ -375,6 +390,10 @@ class CachePattern(models.Model):
     def access_results(self):
         self.generate_results()
         return self._access_results
+
+    @property
+    def address_bits(self):
+        return self.parameters.address_bits
     
     @property
     def final_state(self):
@@ -396,7 +415,6 @@ class CachePattern(models.Model):
             num_accesses=13,
             start_actions = ['normal_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'conflict_miss'],
             access_size=2,
-            address_size=8,
             chance_setup_conflict_aggressive=2,
             chance_setup_conflict=1,
             chance_conflict_miss=3,
@@ -405,7 +423,6 @@ class CachePattern(models.Model):
         MAX_TRIES = 20
         result = CachePattern()
         result.access_size = 2
-        result.address_size = address_size
         result.parameters = parameters
         accesses =  []
         state = CacheState(parameters)
@@ -415,6 +432,7 @@ class CachePattern(models.Model):
         used_by_count = {}
         tag_bits = result.address_bits - (parameters.offset_bits + parameters.index_bits)
         offset_bits = parameters.offset_bits
+        address_bits = parameters.address_bits
         for i in range(num_accesses):
             if i < len(start_actions):
                 access_kind = start_actions[i]
@@ -434,7 +452,7 @@ class CachePattern(models.Model):
                 access_kind = _random_weighted(possible, possible_weights)
             if access_kind == 'normal_miss':
                 for _ in range(MAX_TRIES):
-                    address = random.randrange(0, 1 << result.address_bits)
+                    address = random.randrange(0, 1 << address_bits)
                     address &= ~(result.access_size - 1)
                     (_, index, _) = parameters.split_address(address)
                     if not address in used_indices:

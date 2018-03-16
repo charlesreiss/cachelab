@@ -56,7 +56,7 @@ The first {{ give_first }} answers are given.
         {% endif %}
         <li>
             <!-- access location/size -->
-            {{access.size}} bytes at address <code class="addr">{% format_hex access.address question.address_bits %}</code>: <br>
+            {{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.parameters.address_bits %}</code>: <br>
             <!-- tag --> 
             <label for="access_index_{{ forloop.counter0 }}"
                 {% if show_invalid and old_answer.tag_invalid %} class="missing" {% endif %}
@@ -148,7 +148,7 @@ The first {{ give_first }} answers are given.
                      {% if actual_answer.hit %}
                         hit
                     {% else %}
-                        miss evicting {% format_hex actual_answer.evicted question.address_bits %}
+                        miss evicting {% format_hex actual_answer.evicted question.pattern.parameters.address_bits %}
                     {% endif %})
                 {% endif %}
             {% if ask_evict %}
