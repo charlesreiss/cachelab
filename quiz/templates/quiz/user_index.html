@@ -9,27 +9,65 @@
 You are logged in as {{user}}.
 </p>
 
-<h2>Cache Parameter Question<h2>
-
-<p>View a cache parameter question <a href="{% url 'last-parameter-question' %}">here</a>.</p>
-
-<h2>Cache Pattern Access Question</h2>
-
-{% if pattern_complete > 0 %}
 <p>
-You have answered {{ pattern_complete }} cache access pattern questions. Your best score is {{ pattern_score }}/{{ pattern_max_score }}.
-You can review your <a href="{% url 'last-pattern-question' %}">last answer</a>.
+Goals for this lab:
+<ul>
+<li>
+<p>{%if parameter_perfect %}<span class="done">[DONE]</span>{% else %}<span class="incomplete">[INCOMPLETE]</span> Complete <i>three</i> cache parameter questions without getting any answers wrong. You may keep attempting new problems until you get three correct. (If you don't manage to get all answers correct,
+we will give partial credit.)</p>
+{% if parameter_perfect %}
+<p>You have completed three cache parameter questions with a perfect score. You can still continue doing more of these problems
+<em>for practice only</em>.</p>
+{% elif parameter_complete >= 3 %}
+<p>You have attempted {{ parameter_complete }} cache parameter questions.
+{% if parameter_perfect_count > 0 %}
+    but only got all answers correct on
+    {{ parameter_perfect_count }} of them.
+{% else %}
+    but did not get all answers correct on any of them. (Best three scores: {{ parameter_score1 }} out of {{ parameter_score1_max }}, {{ parameter_score2 }} out of {{ parameter_score2_max }}, {{ parameter_score3 }} out of {{ parameter_score3_max }}.)
+{% endif %}
+</ul></p>
+{% elsif parameter_complete < 3 %}
+<p>You have completed {{ parameter_complete }} cache parameter questions.</p>
+{% endif %}
+{% if parameter_in_progress %}
+<p>You have cache paramter question in progress that you can <a href="{% url 'last-parameter-question' %}">continue working on by clicking here</a>.</p>
+{% else %}
+<p>You can view the <a href="{% url 'last-parameter-question' %}">answer you submitted to the last parameter question</a>
+    or <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-parameter-question' %}">request a new question</button></form></p>
+{% endif %}
+</li>
+<li>
+<p>{% if pattern_perfect %}<span class="done">[DONE]</span>{% else %}<span class="incomplete">[INCOMPLETE]</span>{% endif %}Complete <i>one</i> cache access pattern question without getting any answers wrong. You may keep attempting new problems until you get one completely correct. (If you don't manage to get all answers correct, we will give partial credit for your best submission.)</p>
+{% if pattern_perfect %}
+<p>
+You have completed one completed one cache access pattern question with a perfect score. You can still continue doing more
+of these problems <em>for practice only</em>.</p>
+{% elif pattern_complete > 0 %}
+<p>
+You have attempted {{ pattern_complete }} cache access pattern questions. Your best score was {{ pattern_score }}/{{ pattern_max_score }}.
 </p>
 {% endif %}
-
 {% if pattern_in_progress %}
 <p>
 You have a cache pattern question in progress that you can <a href="{% url 'last-pattern-question' %}">continue working on by clicking here</a>.
 </p>
 {% else %}
 <p>
-<form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a cache pattern question</button></form>
+You can review your <a href="{% url 'last-pattern-question' %}">last answer</a> or
+    or <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">request a new question</button></form></p>
 </p>
 {% endif %}
+</li>
+</ul>
 
+{% if staff %}
+<h2>Special controls for staff testing only:</h2>
+<ul>
+<li><form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'forget-questions' %}">forget my old answers/questions</button></form>
+    (This actually reassigns them to the user <tt>{{user}}+hidden</tt>.)</li>
+<li><form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'unforget-questions' %}">unforget my old answers/questions</button></form>
+    (This reassigns all questions from the user <tt>{{user}}+hidden</tt> to <tt>{{user}}</tt>.)</li>
+</ul>
+{% endif %}
 {% endblock %}

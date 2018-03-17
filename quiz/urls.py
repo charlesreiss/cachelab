@@ -16,6 +16,9 @@ urlpatterns = [
 
     path('test', views.test_control, name='test-control'),
     path('clear-all-questions', views.clear_all_questions, name='clear-all-questions'),
+    
+    path('forget-questions', views.forget_questions, name='forget-questions'),
+    path('unforget-questions', views.unforget_questions, name='unforget-questions'),
 
 ]
 

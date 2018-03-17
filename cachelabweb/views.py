@@ -26,9 +26,11 @@ def forwarded_login_setup(request):
         data = json.loads(info)
         username = data['username']
         timestamp = int(data['timestamp'])
+        staff = int(data.get('staff', '0'))
         offset = time.time() - timestamp
         if offset < 3600:
             request.session['allowed_logins'] = request.session.get('allowed_logins', []) + [username   ]
+            request.session['is_staff'] = staff == 1
             return redirect('forwarded-login-prompt', username)
         else:
             return HttpResponse("Login expired.", status=401)

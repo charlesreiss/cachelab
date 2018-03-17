@@ -28,11 +28,22 @@ def last_pattern_question(request):
 @login_required
 def index_page(request):
     user = request.user.get_username()
+    last_parameter_answer = ParameterAnswer.last_for_user(user)
+    if last_parameter_answer != None:
+        last_parameter_in_progress = not last_parameter_answer.was_complete
+    else:
+        last_parameter_in_progress = False
+    num_parameter_answer = ParameterAnswer.num_complete_for_user(user)
+    best_parameter_answers = ParameterAnswer.best_K_for_user(user, 3)
+    parameter_perfect_count = 0
+    for answer in best_parameter_answers:
+        if answer.score == answer.max_score:
+            parameter_perfect_count += 1
     last_pattern_answer = PatternAnswer.last_for_user(user)
     if last_pattern_answer != None:
-        last_in_progress = not last_pattern_answer.was_complete
+        last_pattern_in_progress = not last_pattern_answer.was_complete
     else:
-        last_in_progress = False
+        last_pattern_in_progress = False
     num_pattern_answer = PatternAnswer.num_complete_for_user(user)
     if num_pattern_answer > 0:
         best_pattern_answer = PatternAnswer.best_complete_for_user()
@@ -43,11 +54,19 @@ def index_page(request):
         pattern_max_score = None
     context = {
         'user': request.user.get_username(),
+        'parameter_in_progress': last_parameter_in_progress,
+        'parameter_complete': num_parameter_answer,
+        'parameter_perfect_count':  parameter_perfect_count,
+
         'pattern_complete': num_pattern_answer,
-        'pattern_in_progress': last_in_progress,
+        'pattern_in_progress': last_pattern_in_progress,
         'pattern_score': pattern_score,
         'pattern_max_score': pattern_max_score,
+        'pattern_perfect': pattern_score == pattern_max_score,
     }
+    for i, answer in enumerate(best_parameter_answers):
+        context['parameter_score{}'.format(i)] = answer.score
+        context['parameter_score{}_max'.format(i)] = answer.max_score
     return HttpResponse(render(request, 'quiz/user_index.html', context))
 
 @login_required
@@ -295,3 +314,31 @@ def clear_all_questions(request):
         return HttpResponse("Cleared all questions.")
     else:
         return HttpResponse("Refusing to clear all questions.")
+
+@login_required
+@require_http_methods(["POST"])
+def forget_questions(request):
+    if request.session.get('is_staff', False):
+        return HttpResponse('This feature is for staff only.')
+    else:
+        user = request.user.get_username()
+        hidden_user = user + '+hidden'
+        PatternAnswer.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+        PatternQuestion.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+        ParameterAnswer.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+        ParameterQuestion.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+
+@login_required
+@require_http_methods(["POST"])
+def unforget_questions(request):
+    if request.session.get('is_staff', False):
+        return HttpResponse('This feature is for staff only.')
+    else:
+        user = request.user.get_username()
+        hidden_user = user + '+hidden'
+        PatternAnswer.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+        PatternQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+        ParameterAnswer.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+        ParameterQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+
+

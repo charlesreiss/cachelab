@@ -309,10 +309,20 @@ class ParameterAnswer(models.Model):
     submit_time = models.DateTimeField(auto_now=True,editable=False)
     answer_raw = models.TextField()
     was_complete = models.BooleanField()
+    score = models.IntegerField()
+    score_ratio = models.FloatField()
+    
+    class Meta: 
+        indexes = [
+            models.Index(fields=['for_user', 'submit_time']),
+            models.Index(fields=['for_user', 'was_complete', 'score_ratio']),
+        ]
 
     def set_answer(self, answer):
         self._answer = _score_answer(answer)
         self.answer_raw = json.dumps(_score_answer(answer))
+        self.score = self._answer['score']
+        self.score_ratio = float(self.score) / self.max_score
 
     def get_answer(self):
         if not self._answer:
@@ -321,22 +331,34 @@ class ParameterAnswer(models.Model):
 
     answer = property(get_answer, set_answer)
 
+    @property
+    def max_score(self):
+        return len(self.question.missing_parts)
+
     def _score_answer(self, answer):
         score = 0
-        max_score = 0
         for item in self.question.missing_parts:
-            max_score += 1
             invalid_p = value_from_any(self.answer.get(item)) == None
             correct_p = value_from_any(self.answer.get(item)) == self.question.find_cache_property(item)
-            self.answer[item + '_invalid'] = invalid_p
-            self.answer[item  + '_correct'] = correct_p
+            answer[item + '_invalid'] = invalid_p
+            answer[item  + '_correct'] = correct_p
             if correct_p:
                 score += 1
+        answer['score'] = score
+        return answer
 
     @staticmethod
     def last_for_question(question):
         return ParameterAnswer.objects.filter(question=question).order_by('-submit_time').first()
     
+    @staticmethod
+    def num_complete_for_user(username, K):
+        return ParameterAnswer.objects.filter(for_user=username, was_complete=True).count()
+    
+    @staticmethod
+    def best_K_for_user(username, K):
+        return ParameterAnswer.objects.filter(for_user=username, was_complete=True).order_by('-score_ratio', '-submit_time')[:K]
+
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
     entry_list.sort(key=lambda e: e.lru)
@@ -672,6 +694,11 @@ class PatternQuestion(models.Model):
     ask_evict = models.BooleanField(default=True)
     index = models.IntegerField()
     give_first = models.IntegerField(default=5)
+   
+    class Meta: 
+        indexes = [
+            models.Index(fields=['for_user', 'index']),
+        ]
 
     @property
     def tag_bits(self):
@@ -753,6 +780,12 @@ class PatternAnswer(models.Model):
     was_save = models.BooleanField(default=False)
     submit_time = models.DateTimeField(auto_now=True,editable=False)
     for_user = models.TextField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['for_user', 'submit_time']),
+            models.Index(fields=['for_user', 'was_complete', 'score']),
+        ]
 
     _access_results = None
 
