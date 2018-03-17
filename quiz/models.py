@@ -10,24 +10,79 @@ import uuid
 logger = logging.getLogger('cachelabweb')
 
 class CacheAccess():
-    def __init__(self, data, default_size=1):
-        self.type = data['type']  # read or write
-        self.address = data['address']
-        self.size = data.get('size', default_size)
-        self.kind = data.get('kind', None)
+    def __init__(self, address, size=1, kind=None, type='R'):
+        self.address = address
+        self.size = size
+        self.kind = kind
 
     @property
     def address_hex(self):
         return hex(self.address)
 
+    @property
+    def is_write(self):
+        return False
+
+    @property
+    def is_read(self):
+        return True
+
     def as_dump(self):
         return {
-            'type': self.type,
             'address': self.address,
             'size': self.size,
             'kind': self.kind,
         }
 
+def format_hex(value, bits=None):
+    if value == None:
+        return ''
+    elif bits != None:
+        width = int((bits + 3) / 4)
+        return '0x{:0{width}x}'.format(value, width=width)
+    else:
+        return '0x{:x}'.format(value)
+
+class ResultItem():
+    def __init__(self, value, string=None, invalid=False, correct=True):
+        self.value = value
+        self.string = string
+        self.invalid = invalid
+        self.correct = correct
+
+class CacheAccessResult():
+    @staticmethod
+    def from_reference(hit, tag, index, offset, evicted, tag_bits=None, index_bits=None, offset_bits=None, address_bits=None):
+        self = CacheAccessResult()
+        self.hit = ResultItem(value=hit)
+        self.tag = ResultItem(value=tag, string=format_hex(tag, tag_bits))
+        self.index = ResultItem(value=index, string=format_hex(index, index_bits))
+        self.offset = ResultItem(value=offset, string=format_hex(offset, offset_bits))
+        self.evicted = ResultItem(value=evicted, string=format_hex(evicted, address_bits))
+        return self
+
+
+    def set_from_string(self, key, value):
+        int_value = value_from_hex(value)
+        self.__dict__[key] = {
+            'value': int_value,
+            'string': value,
+            'invalid': int_value == None,
+            'correct': None,
+        }
+        return int_value != None
+
+    def as_dump_reference(self):
+        return {
+            'hit': self.hit.value,
+            'tag': self.tag.value,
+            'index': self.index.value,
+            'offset': self.offset.value,
+            'evicted': self.evicted.value
+        }
+    
+    def as_dump(self):
+        return vars(self)
 
 class CacheEntry():
     def __init__(self, data):
@@ -336,17 +391,21 @@ class CacheState():
                 found.valid = True
                 found.tag = tag
         # FIXME: conditional on is_writeback?
-        if access.type == 'W':
+        if access.is_write:
             found.dirty = True
         if not dry_run:
             _update_lru(entries_at_index, found)
-        return {
-            'hit': was_hit,
-            'tag': tag,
-            'index': index,
-            'offset': offset,
-            'evicted': evicted,
-        }
+        return CacheAccessResult.from_reference(
+            hit=was_hit,
+            tag=tag,
+            index=index,
+            offset=offset,
+            evicted=evicted,
+            tag_bits=self.params.tag_bits,
+            index_bits=self.params.index_bits,
+            offset_bits=self.params.offset_bits,
+            address_bits=self.params.address_bits,
+        )
 
     def to_json(self):
         return json.dumps(list(
@@ -382,9 +441,13 @@ class CachePattern(models.Model):
     accesses_raw = models.TextField()
     _have_access_results = False
 
-    @property
-    def accesses(self):
-        return list(map(CacheAccess, json.loads(self.accesses_raw)))
+    def get_accesses(self):
+        return list(map(lambda x: CacheAccess(**x), json.loads(self.accesses_raw)))
+
+    def set_accesses(self, accesses):
+        self.accesses_raw = json.dumps(list(map(lambda x: x.as_dump(), accesses)))
+
+    accesses = property(get_accesses, set_accesses)
 
     @property
     def access_results(self):
@@ -473,17 +536,15 @@ class CachePattern(models.Model):
             else:
                 return None
 
-        def _find_used_miss():
-            if len(used_indices) == 0:
-                return random.randrange(0, 1 << address_bits)
-            index = random.choice(list(used_indices))
-            # first try to find a random non-conflict miss
-            for _ in range(MAX_TRIES):
-                tag = random.randrange(0, 1 << parameters.tag_bits)
-                block_address = parameters.unsplit_address(tag, index, 0)
-                if block_address in would_hit or block_address in would_miss:
-                    continue
-                return block_address
+        def _find_miss_for_index(index, prefer_non_conflict=True):
+            if prefer_non_conflict:
+                # first try to find a random non-conflict miss
+                for _ in range(MAX_TRIES):
+                    tag = random.randrange(0, 1 << parameters.tag_bits)
+                    block_address = parameters.unsplit_address(tag, index, 0)
+                    if block_address in would_hit or block_address in would_miss:
+                        continue
+                    return block_address
             # then try to find a random maybe-conflict-miss
             for _ in range(MAX_TRIES):
                 tag = random.randrange(0, 1 << parameters.tag_bits)
@@ -502,6 +563,12 @@ class CachePattern(models.Model):
                     break
             return random.choice(possible_blocks)
 
+        def _find_used_miss():
+            if len(used_indices) == 0:
+                return random.randrange(0, 1 << address_bits)
+            index = random.choice(list(used_indices))
+            return _find_miss_for_index(index)
+
         def _find_random_miss():
             for _ in range(MAX_TRIES):
                 address = random.randrange(0, 1 << address_bits)
@@ -513,7 +580,8 @@ class CachePattern(models.Model):
             # fallback to other mechanisms
             address = _find_unused_miss()
             if address == None:
-                return _find_used_miss()
+                address = _find_used_miss()
+            return address
             
         for i in range(num_accesses):
             if i < len(start_actions):
@@ -536,6 +604,7 @@ class CachePattern(models.Model):
                     possible.append('conflict_miss')
                     possible_weights.append(chance_conflict_miss)
                 access_kind = _random_weighted(possible, possible_weights)
+            logger.debug('chosen access kind is %s', access_kind)
             if access_kind == 'random_miss':
                 address = _find_random_miss()
             elif access_kind == 'miss_prefer_empty':
@@ -555,35 +624,30 @@ class CachePattern(models.Model):
                         best_count = v
                     elif v > best_count or (v > 0 and best_count == parameters.num_ways):
                         best_count = v
+                logger.debug('looking for count %s', best_count)
                 candidates = []
                 for k, v in used_by_count.items():
                     if v == best_count:
-                        candidates.append(v)
-                base_address = random.choice(candidates)
-                (_, index, _) = parameters.split_address(address)
-                for _ in range(MAX_TRIES):
-                    new_tag = random.randrange(0, 1 << tag_bits)
-                    address = parameters.unsplit_address(new_tag, index, 0)
-                    if not (address in would_hit or address in would_miss):
-                        break
-                identified_access_type = True
+                        candidates.append(k)
+                logger.debug('candidates are %s', candidates)
+                index = random.choice(candidates)
+                address = _find_miss_for_index(index, prefer_non_conflict=False)
             elif access_kind == 'setup_conflict':
                 base_address = random.choice(list(would_hit))
                 (_, index, _) = parameters.split_address(address)
-                for _ in range(MAX_TRIES):
-                    new_tag = random.randrange(0, 1 << tag_bits)
-                    address = parameters.unsplit_address(new_tag, index, 0)
-                    if not (address in would_hit or address in would_miss):
-                        break
-                identified_access_type = True
+                address = _find_miss_for_index(index, prefer_non_conflict=False)
             else:
                 raise Exception("Could not identify access type")
+            assert address != None, 'no address generated for kind {}'.format(access_kind)
             without_offset = parameters.drop_offset(address)
-            (_, index, _) = parameters.split_address(address)
+            (tag, index, _) = parameters.split_address(address)
             new_offset = random.randrange(0, 1 << offset_bits) & ~(result.access_size - 1)
             address = without_offset | new_offset
-            accesses.append(CacheAccess({'type':'R', 'address':address, 'size':result.access_size, 'kind': access_kind}))
+            accesses.append(CacheAccess(address=address, size=result.access_size, kind=access_kind))
             access_result = state.apply_access(accesses[-1])
+            (new_tag, new_index, _) = parameters.split_address(address)
+            assert tag == new_tag
+            assert index == new_index
             used_indices.add(index)
             if index in used_by_count:
                 used_by_count[index] = max(used_by_count[index] + 1, parameters.num_ways)
@@ -591,9 +655,9 @@ class CachePattern(models.Model):
                 used_by_count[index] = 1
             would_hit.add(without_offset)
             would_miss.discard(without_offset)
-            if access_result['evicted'] != None:
-                would_miss.add(access_result['evicted'])
-                would_hit.discard(access_result['evicted'])
+            if access_result.evicted.value != None:
+                would_miss.add(access_result.evicted.value)
+                would_hit.discard(access_result.evicted.value)
         result.accesses_raw = json.dumps(list(map(lambda a: a.as_dump(), accesses)))
         result.generate_results()
         result.save()
@@ -700,7 +764,7 @@ class PatternAnswer(models.Model):
 
     def set_access_results(self, value):
         self._access_results = self._score_answer(value)
-        self.access_results_raw = json.dumps(self._access_results)
+        self.access_results_raw = json.dumps(map(lambda x: x.as_dump(), self._access_results))
 
     access_results = property(get_access_results, set_access_results)
 
@@ -711,22 +775,23 @@ class PatternAnswer(models.Model):
         i = 0
         for submitted, expected in zip(submitted_results, expected_results):
             if i >= self.question.give_first:
-                max_score += 4
-            if submitted['hit'] == expected['hit']:
+                max_score += 5
+            if submitted.hit.value == expected.hit.value:
                 if i >= self.question.give_first:
                     score += 1
-                submitted['hit_correct'] = True
-                logger.debug("Setting hit_correct TRUE")
+                submitted.hit.correct = True
             else:
-                submitted['hit_correct'] = False
-                logger.debug("Setting hit_correct FALSE")
+                submitted.hit.correct = False
             for which in ['tag', 'index', 'offset']:
-                if value_from_hex(submitted[which]) == expected[which]:
-                    submitted[which + '_correct'] = True
+                if getattr(submitted, which).value == expected[which]:
+                    getattr(submitted, which).correct = True
                     if i >= self.question.give_first:
                         score += 1
                 else:
-                    submitted[which + '_correct'] = False
+                    getattr(submitted, which).correct = False
+            if expected.evicted.value == submitted.evicted.value:
+                score += 1
+                submitted.evicted.correct = True
             i += 1
         self.score = score
         self.max_score = max_score

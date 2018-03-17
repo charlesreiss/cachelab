@@ -63,43 +63,43 @@ The first {{ give_first }} answers are given.
             >tag:</label>
             <input type="text" id="access_tag_{{ forloop.counter0 }}"
                 name="access_tag_{{ forloop.counter0 }}"
-                value="{{ old_answer.tag }}"
+                value="{{ old_answer.tag_string }}"
                 {% if show_correct or is_given %} disabled {% endif %} size="{{tag_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %};
-                 correct answer: <tt>{% format_hex actual_answer.tag question.tag_bits %}</tt>)
+                (was{% if old_answer.index.correct %} correct{% else %} incorrect{% endif %};
+                 correct answer: <tt>{{ actual_answer.tag.string }}</tt>)
             {% endif %}
             <!-- index -->
             <label for="access_index_{{ forloop.counter0 }}"
-                {% if show_invalid and old_answer.index_invalid %} class="missing" {% endif %}
+                {% if show_invalid and old_answer.index.invalid %} class="missing" {% endif %}
             >index:</label>
             <input type="text" id="access_index_{{ forloop.counter0 }}"
                    name="access_index_{{ forloop.counter0 }}"
-                   value="{{ old_answer.index }}"
+                   value="{{ old_answer.index_string }}"
                    {% if show_correct or is_given %} disabled {% endif %} size="{{index_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.index_correct %} correct{% else %} incorrect{% endif %};
-                 correct answer: <tt>{% format_hex actual_answer.index  question.index_bits %}</tt>)
+                (was{% if old_answer.index.correct %} correct{% else %} incorrect{% endif %};
+                 correct answer: <tt>{{ actual_answer.index.string }}</tt>)
             {% endif %}
             <!-- offset -->
             <label for="access_offset_{{ forloop.counter0 }}"
-                {% if show_invalid and old_answer.offset_invalid %} class="missing" {% endif %}
+                {% if show_invalid and old_answer.offset.invalid %} class="missing" {% endif %}
             >offset:</label>
             <input type="text" name="access_offset_{{ forloop.counter0 }}"
                 id="access_offset_{{ forloop.counter0 }}" value="{{ old_answer.offset }}"
                 {% if show_correct or is_given %} disabled {% endif %} size="{{offset_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.offset_correct %} correct{% else %} incorrect{% endif %};
-                 correct answer: <tt>{% format_hex actual_answer.offset question.offset_bits  %}</tt>)
+                (was{% if old_answer.offset.correct %} correct{% else %} incorrect{% endif %};
+                 correct answer: <tt>{{ actual_answer.offset.string }}</tt>)
             {% endif %}
             <!-- hit/miss -->
-            <fieldset {% if show_invalid and old_answer.hit_invalid and not is_given %}class="missing"{% endif %}>
+            <fieldset {% if show_invalid and old_answer.hit.invalid and not is_given %}class="missing"{% endif %}>
                 <!-- is hit? -->
                 <input type="radio" id="access_hit_{{ forloop.counter0 }}_ishit" name="access_hit_{{ forloop.counter0 }}" value="hit"
-                    {% if not old_answer.hit_invalid and old_answer.hit == True %} checked {% endif %}
+                    {% if not old_answer.hit.invalid and old_answer.hit == True %} checked {% endif %}
                     {% if show_correct or is_given %} disabled {% endif %}
                     {% if ask_evict %}
                         onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
@@ -109,7 +109,7 @@ The first {{ give_first }} answers are given.
                     <!-- is miss/no evict -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_noevict"
                         name="access_hit_{{ forloop.counter0 }}" value="miss-noevict"
-                        {% if not old_answer.hit_invalid and old_answer.hit == False and old_answer.evicted == None %}
+                        {% if not old_answer.hit.invalid and old_answer.hit == False and old_answer.evicted == None %}
                             checked
                         {% endif %}
                         {% if show_correct or is_given %}
@@ -120,7 +120,7 @@ The first {{ give_first }} answers are given.
                     <!-- is miss/evict -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_evict"
                         name="access_hit_{{ forloop.counter0 }}" value="miss-evict"
-                        {% if not old_answer.hit_invalid and old_answer.hit == False and old_answer.evicted != None %}
+                        {% if not old_answer.hit.invalid and old_answer.hit == False and old_answer.evicted != None %}
                             checked 
                         {% endif %}
                         {% if show_correct or is_given %}
@@ -130,25 +130,27 @@ The first {{ give_first }} answers are given.
                     ><label for="access_hit_{{ forloop.counter0 }}_ismiss_evict">miss, </label>
                     <!-- miss/evict address -->
                     <label for="access_hit_{{ forloop.counter0 }}_miss_evict" 
-                        {% if show_invalid and old_answer.evicted_invalid %} class="missing" {% endif %}>evicting</label>
+                        {% if show_invalid and old_answer.evicted.invalid %} class="missing" {% endif %}>evicting</label>
                     <input type="text" id ="access_evict_{{ forloop.counter0 }}" name="access_evict_{{ forloop.counter0 }}" 
-                        {% if old_answer.evicted != None %} value="{{ old_answer.evicted }}" {% endif %}
+                        {% if old_answer.evicted != None %} value="{{ old_answer.evicted.string }}" {% endif %}
                         {% if show_correct or is_given or old_answer.evicted == None %} disabled {% endif %}>
                 {% else %}
                     <!-- is miss -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss" name="access_hit_{{ forloop.counter0 }}" value="miss"
-                        {% if not old_answer.hit_invalid and old_answer.miss_noevict == True %} checked {% endif %}
+                        {% if not old_answer.hit.invalid and old_answer.miss_noevict == True %} checked {% endif %}
                         {% if show_correct or is_given %} disabled {% endif %}
                         ><label for="access_hit_{{ forloop.counter0 }}_ismiss">miss</label>
                     </input>
                 {% endif %}
                 {% if show_correct %}
-                    (was{% if old_answer.hit_correct %} correct{% else %} incorrect{% endif %};
+                    (was{% if old_answer.hit.correct %} correct{% else %} incorrect{% endif %};
                      correct answer:
-                     {% if actual_answer.hit %}
+                     {% if actual_answer.hit.value %}
                         hit
-                    {% else %}
-                        miss evicting {% format_hex actual_answer.evicted question.pattern.parameters.address_bits %}
+                     {% elif actual_answer.evicted.value != None %}
+                        miss evicting {% actual_answer.evicted.string %}
+                     {% else %}
+                        miss evicting nothing
                     {% endif %})
                 {% endif %}
             {% if ask_evict %}
@@ -174,10 +176,12 @@ The first {{ give_first }} answers are given.
         name="is_save" value="1"
 >
 </form>
+{% if debug_enable %}
 <h2>Expected result</h2>
 <ul>
 {% for result in question.pattern.access_results %}
-    <li>result should be {{ result.tag }} {{ result.index }} {{ result.offset }} {% if result.hit %}hit{% else %}miss{% endif %} (evicts {% format_hex result.evicted question.address_bits %})</li>
+    <li>result should be {{ result.tag.string }} {{ result.index.string }} {{ result.offset.string }} {% if result.hit %}hit{% else %}miss{% endif %} (evicts {{ result.evicted.string }}</li>
 {% endfor %}
+{% endif %}
 </ul>
 {% endblock %}

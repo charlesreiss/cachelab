@@ -64,12 +64,13 @@ def new_pattern_question(request):
 def test_control(request):
     return HttpResponse(render(request, 'quiz/test_control.html', {}))
 
+"""Convert a computed access result to the same format as a user supplied answer."""
 def _convert_given_access_result(access_result):
-    result = access_result.copy()
+    result = {}
     for key in ['tag', 'index', 'offset', 'evicted']:
         result[key + '_invalid'] = False
-        if result[key] != None:
-            result[key] = '0x{:x}'.format(result[key])
+        if getattr(result, key) != None:
+            result[key] = '0x{:x}'.format(getattr(result, key))
     result['hit_invalid'] = False
     return result
     
@@ -146,52 +147,33 @@ def pattern_answer(request, question_id):
     for i in range(question.give_first):
         submitted_results.append(_convert_given_access_result(question.pattern.access_results[i]))
     for i in range(question.give_first, len(question.pattern.access_results)):
-        cur_access = {
-            'hit': False,
-            'tag': None,
-            'index': None,
-            'offset': None,
-            'evicted': None,
-        }
+        cur_access = CacheAccessResult()
         hit_key = 'access_hit_{}'.format(i)
         if hit_key in request.POST:
             hit_value = request.POST[hit_key]
-            cur_access['hit_invalid'] = False
+            cur_access.hit_invalid = False
         else:
             hit_value = None
-            cur_access['hit_invalid'] = True
+            cur_access.hit_invalid = True
         if hit_value == 'hit':
-            cur_access['hit'] = True
+            cur_access.hit = True
         elif hit_value != None and hit_value.startswith('miss'):
-            cur_access['hit'] = False
+            cur_access.hit = False
         else:
-            cur_access['hit'] = None
-        for which in ['tag', 'index', 'offset', 'evicted']:
+            cur_access.hit = None
+        for which in ['tag', 'index', 'offset']:
             key = 'access_{}_{}'.format(which, i)
             if key in request.POST:
                 value = request.POST[key].strip()
-                cur_access[which] = value
-                if value_from_hex(value) == None:
-                    cur_access[which + '_invalid'] = True
-                    is_complete = False
-                else:
-                    logger.debug('%s valid??', which)
-                    cur_access[which + '_invalid'] = False
             else:
-                logger.error('did not find key %s', key)
-                cur_access[which  + '_invalid'] = True
-                is_complete = False
+                value = ''
+            is_complete = is_complete and cur_access.set_from_string(which, value)
         if hit_value != 'miss-evict':
-            cur_access['evicted'] = None
-            cur_access['evicted_invalid'] = False
+            cur_access.set_from_string('evicted', '')
+            cur_access.evicted.invalid = False
         else:
-            if cur_access['evicted'] == None:
-                cur_access['evicted'] = ''
-                cur_access['evicted_invalid'] = True
-                is_complete = False
-            elif value_from_hex(cur_access['evicted']) == None:
-                cur_access['evicted_invalid'] = True
-                is_complete = False
+            value = request.POST.get('access_evicted_{}'.format(i), '')
+            is_complete = is_complete and cur_access.set_from_string('evicted', value)
         logger.debug('adding access %s', cur_access)
         submitted_results.append(cur_access)
     answer.access_results = submitted_results
