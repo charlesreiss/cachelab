@@ -66,7 +66,7 @@ class CacheParameters(models.Model):
         return int(math.log2(self.num_sets))
 
     @property
-    def tag_bits(self, size):
+    def tag_bits(self):
         return self.address_bits - self.offset_bits - self.index_bits
 
     @property
@@ -410,35 +410,121 @@ class CachePattern(models.Model):
             self._final_state = state
             self._have_access_results = True
 
+
+    """
+    Generate a psuedorandom access pattern.
+    
+    Takes relative frequencies of the types of accesses (on average, chosen randomly) and a fixed pattern
+    to start with.
+
+    The access types:
+    * random_miss --- a cache miss, by choosing a random address, with fallback to explicitly searching for
+        a missing address
+    * miss_prefer_empty --- a cache miss, in an empty set if possible
+    * miss_prefer_used --- a cache miss, in a used set if possible, with a preference to avoid conflict misses
+    * conflict_miss --- a cache miss to a previously evicted block
+    * setup_conflict --- a cache miss to an already-accessed set
+    * setup_conflict_aggressive --- a cache miss to a most-full already accessed set
+    """
     @staticmethod
     def generate_random(parameters,
             num_accesses=13,
-            start_actions = ['normal_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'conflict_miss'],
+            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'conflict_miss'],
             access_size=2,
-            chance_setup_conflict_aggressive=2,
-            chance_setup_conflict=1,
-            chance_conflict_miss=3,
-            chance_hit=3,
-            chance_normal_miss=1):
+            chance_setup_conflict_aggressive=3,
+            chance_setup_conflict=2,
+            chance_conflict_miss=5,
+            chance_hit=5,
+            chance_random_miss=0.5,
+            chance_miss_prefer_empty=1,
+            chance_miss_prefer_used=0.5):
         MAX_TRIES = 20
+        MAX_RANDOM_LIST = 1000
         result = CachePattern()
         result.access_size = 2
         result.parameters = parameters
         accesses =  []
         state = CacheState(parameters)
         would_hit = set()
-        would_miss = set()
+        would_miss = set()  # miss AND previously accessed
         used_indices = set()
         used_by_count = {}
-        tag_bits = result.address_bits - (parameters.offset_bits + parameters.index_bits)
+        tag_bits = parameters.tag_bits
+        index_bits = parameters.index_bits
         offset_bits = parameters.offset_bits
         address_bits = parameters.address_bits
+        def _find_unused_miss():
+            if len(used_indices) != parameters.num_sets:
+                possible_indices = []
+                for _ in range(MAX_TRIES):
+                    index = random.randrange(0, 1 << index_bits)
+                    if index not in used_indices:
+                        tag = random.randrange(0, 1 << tag_bits)
+                        return parameters.unsplit_address(tag, index)
+                for index in range(parameters.num_sets):
+                    if index in used_indices:
+                        continue
+                    possible_indices.append(index)
+                    if len(possible_indices) > MAX_RANDOM_LIST:
+                        break
+                index = random.choice(possible_indices)
+                tag = random.randrange(0, 1 << tag_bits)
+                return parameters.unsplit_address(tag, index, 0)
+            else:
+                return None
+
+        def _find_used_miss():
+            if len(used_indices) == 0:
+                return random.randrange(0, 1 << address_bits)
+            index = random.choice(list(used_indices))
+            # first try to find a random non-conflict miss
+            for _ in range(MAX_TRIES):
+                tag = random.randrange(0, 1 << parameters.tag_bits)
+                block_address = parameters.unsplit_address(tag, index, 0)
+                if block_address in would_hit or block_address in would_miss:
+                    continue
+                return block_address
+            # then try to find a random maybe-conflict-miss
+            for _ in range(MAX_TRIES):
+                tag = random.randrange(0, 1 << parameters.tag_bits)
+                block_address = parameters.unsplit_address(tag, index, 0)
+                if block_address in would_hit:
+                    continue
+                return block_address
+            # then search exhaustively for possible blocks
+            possible_blocks = []
+            for tag in range(0, 1 << parameters.tag_bits):
+                block_address = parameters.unsplit_address(tag, index, 0)
+                if block_address in would_hit:
+                    continue
+                possible_blocks.append(block_address)
+                if len(possible_blocks) > MAX_RANDOM_LIST:
+                    break
+            return random.choice(possible_blocks)
+
+        def _find_random_miss():
+            for _ in range(MAX_TRIES):
+                address = random.randrange(0, 1 << address_bits)
+                address &= ~(result.access_size - 1)
+                (tag, index, _) = parameters.split_address(address)
+                block_address = parameters.unsplit_address(tag, index, 0)
+                if block_address not in would_hit:
+                    return block_address
+            # fallback to other mechanisms
+            address = _find_unused_miss()
+            if address == None:
+                return _find_used_miss()
+            
         for i in range(num_accesses):
             if i < len(start_actions):
                 access_kind = start_actions[i]
             else:
-                possible = ['normal_miss']
+                possible = ['random_miss']
                 possible_weights = [chance_normal_miss]
+                possible.append('miss_prefer_empty')
+                possible_weights.append(chance_miss_prefer_empty)
+                possible.append('miss_prefer_used')
+                possible_weights.append(chance_miss_prefer_used)
                 if len(would_hit) > 0:
                     possible.append('hit')
                     possible_weights.append(chance_hit)
@@ -450,15 +536,18 @@ class CachePattern(models.Model):
                     possible.append('conflict_miss')
                     possible_weights.append(chance_conflict_miss)
                 access_kind = _random_weighted(possible, possible_weights)
-            if access_kind == 'normal_miss':
-                for _ in range(MAX_TRIES):
-                    address = random.randrange(0, 1 << address_bits)
-                    address &= ~(result.access_size - 1)
-                    (_, index, _) = parameters.split_address(address)
-                    if not address in used_indices:
-                        break
+            if access_kind == 'random_miss':
+                address = _find_random_miss()
+            elif access_kind == 'miss_prefer_empty':
+                address = _find_unused_miss()
+                if address == None:
+                    address = _find_random_miss()
+            elif access_kind == 'miss_prefer_used':
+                address = _find_used_miss()
             elif access_kind == 'hit':
                 address = random.choice(list(would_hit))
+            elif access_kind == 'conflict_miss':
+                address = random.choice(list(would_miss))
             elif access_kind == 'setup_conflict_aggressive':
                 best_count = None
                 for v in used_by_count.values():
@@ -477,6 +566,7 @@ class CachePattern(models.Model):
                     address = parameters.unsplit_address(new_tag, index, 0)
                     if not (address in would_hit or address in would_miss):
                         break
+                identified_access_type = True
             elif access_kind == 'setup_conflict':
                 base_address = random.choice(list(would_hit))
                 (_, index, _) = parameters.split_address(address)
@@ -485,10 +575,9 @@ class CachePattern(models.Model):
                     address = parameters.unsplit_address(new_tag, index, 0)
                     if not (address in would_hit or address in would_miss):
                         break
-            elif access_kind == 'conflict_miss':
-                address = random.choice(list(would_miss))
+                identified_access_type = True
             else:
-                assert(False)
+                raise Exception("Could not identify access type")
             without_offset = parameters.drop_offset(address)
             (_, index, _) = parameters.split_address(address)
             new_offset = random.randrange(0, 1 << offset_bits) & ~(result.access_size - 1)
@@ -541,13 +630,13 @@ class PatternQuestion(models.Model):
         return PatternQuestion.objects.filter(for_user__exact=for_user).order_by('-index').first()    
 
     @staticmethod
-    def generate_random(parameters, for_user):
+    def generate_random(parameters, for_user, **extra_args):
         last_question = PatternQuestion.last_question_for_user(for_user)
         if last_question:
             index = last_question.index + 1
         else:
             index = 0
-        pattern = CachePattern.generate_random(parameters)
+        pattern = CachePattern.generate_random(parameters, **extra_args)
         result = PatternQuestion()
         result.pattern = pattern
         result.for_user = for_user
