@@ -89,7 +89,7 @@ The first {{ give_first }} answers are given.
                 {% if show_invalid and old_answer.offset.invalid %} class="missing" {% endif %}
             >offset:</label>
             <input type="text" name="access_offset_{{ forloop.counter0 }}"
-                id="access_offset_{{ forloop.counter0 }}" value="{{ old_answer.offset }}"
+                id="access_offset_{{ forloop.counter0 }}" value="{{ old_answer.offset.string }}"
                 {% if show_correct or is_given %} disabled {% endif %} size="{{offset_width}}"
             >
             {% if show_correct %}
