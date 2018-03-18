@@ -10,12 +10,16 @@ You are logged in as <strong>{{user}}</strong>.
 </p>
 
 {% if mark_invalid %}
+<p>
 Some of your answers were missing or misformatted. They are shown with <span class="missing">red</span> below.
+</p>
 {% endif %}
 
-{% if show_correct %}
+{% if show_correct %} <form>{% csrf_token %}
+<p>
 You got a score of {{answer.score}} out of {{answer.max_score}} on this question at {{answer.submit_time}}.
-You can <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-parameter-quesiton' %}">get a new question</button></form>
+You can <button formmethod="POST" formaction="{% url 'new-parameter-question' %}">get a new question</button>
+</p></form>
 {% endif %}
 
 <form method="POST" action="{% url 'parameter-answer' question.question_id %}">{% csrf_token %}
@@ -32,14 +36,15 @@ either <tt>32K</tt> or <tt>32768</tt>.
     </tr>
     {% else %}
     <tr 
-        {% if mark_invalid and invalid %}
+        {% if mark_invalid and row.invalid %}
         class="missing"
         {% endif %}
     >
         <td class="paramLabel"><label for="{{row.id}}">{{ row.name }}:</label></td>
         <td><input 
             {% if show_correct %} disabled {% endif %}
-            type="text" id="{{row.id}}" value="{{row.value}}" name="{{row.name}}"></td>
+            type="text" id="{{row.id}}" value="{{row.value}}" name="{{row.id}}">
+        {% if show_correct %} {% if not row.correct %} (incorrect; correct answer: {{row.correct_value}}) {% else %} (correct) {% endif %} {% endif %}</td>
     </tr>
     {% endif %}
 {% endfor %}

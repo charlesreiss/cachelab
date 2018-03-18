@@ -3,49 +3,56 @@
 {% block title %}Index for {{user}}{% endblock %}
 
 {% block content %}
-<h1>CacheLab: access pattern quiz index</h1>
+<h1>CacheLab: main interface page</h1>
 
 <p>
 You are logged in as {{user}}.
 </p>
 
+<form>{% csrf_token %}
 <p>
 Goals for this lab:
 <ul>
 <li>
-<p>{%if parameter_perfect %}<span class="done">[DONE]</span>{% else %}<span class="incomplete">[INCOMPLETE]</span> Complete <i>three</i> cache parameter questions without getting any answers wrong. You may keep attempting new problems until you get three correct. (If you don't manage to get all answers correct,
-we will give partial credit.)</p>
+<p>{%if parameter_perfect %}<span class="done">[DONE]</span>{% else %}<span class="incomplete">[INCOMPLETE]</span>{% endif %} Complete <i>three</i> cache parameter questions without getting any parts wrong. You may keep attempting new problems until you get three correct. (If you don't manage to get all answers correct,
+we will give partial credit based on your best submissions.)</p>
 {% if parameter_perfect %}
 <p>You have completed three cache parameter questions with a perfect score. You can still continue doing more of these problems
 <em>for practice only</em>.</p>
 {% elif parameter_complete >= 3 %}
-<p>You have attempted {{ parameter_complete }} cache parameter questions.
+<p>You have completed {{ parameter_complete }} cache parameter questions,
 {% if parameter_perfect_count > 0 %}
-    but only got all answers correct on
-    {{ parameter_perfect_count }} of them.
+    and got all answers correct on
+    {{ parameter_perfect_count }} of them. (Best three scores: {{ parameter_score1 }} out of {{ parameter_score1_max }}, {{ parameter_score2 }} out of {{ parameter_score2_max }}, {{ parameter_score3 }} out of {{ parameter_score3_max }}.)
 {% else %}
     but did not get all answers correct on any of them. (Best three scores: {{ parameter_score1 }} out of {{ parameter_score1_max }}, {{ parameter_score2 }} out of {{ parameter_score2_max }}, {{ parameter_score3 }} out of {{ parameter_score3_max }}.)
 {% endif %}
-</ul></p>
-{% elsif parameter_complete < 3 %}
-<p>You have completed {{ parameter_complete }} cache parameter questions.</p>
+</p>
+{% elif parameter_complete < 3 %}
+<p>You have completed {{ parameter_complete }} cache parameter questions, and gotten all answers correct on {{ parameter_perfect_count }} of them.</p>
 {% endif %}
 {% if parameter_in_progress %}
 <p>You have cache paramter question in progress that you can <a href="{% url 'last-parameter-question' %}">continue working on by clicking here</a>.</p>
 {% else %}
-<p>You can view the <a href="{% url 'last-parameter-question' %}">answer you submitted to the last parameter question</a>
-    or <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-parameter-question' %}">request a new question</button></form></p>
+<p>You can <button formmethod="POST" formaction="{% url 'new-parameter-question' %}">request a new question</button>
+{% endif %}
+{% if not parameter_in_progress and parameter_complete > 0 %}
+<p>You can also review the <a href="{% url 'last-parameter-question' %}">answer you submitted to the last parameter question</a>.</p>
 {% endif %}
 </li>
 <li>
 <p>{% if pattern_perfect %}<span class="done">[DONE]</span>{% else %}<span class="incomplete">[INCOMPLETE]</span>{% endif %}Complete <i>one</i> cache access pattern question without getting any answers wrong. You may keep attempting new problems until you get one completely correct. (If you don't manage to get all answers correct, we will give partial credit for your best submission.)</p>
 {% if pattern_perfect %}
 <p>
-You have completed one completed one cache access pattern question with a perfect score. You can still continue doing more
+You have completed one cache access pattern question with a perfect score. You can still continue doing more
 of these problems <em>for practice only</em>.</p>
 {% elif pattern_complete > 0 %}
 <p>
-You have attempted {{ pattern_complete }} cache access pattern questions. Your best score was {{ pattern_score }}/{{ pattern_max_score }}.
+You have completed {{ pattern_complete }} cache access pattern questions. Your best score was {{ pattern_score }}/{{ pattern_max_score }}.
+</p>
+{% else %}
+<p>
+You have completed 0 cache access pattern questions.
 </p>
 {% endif %}
 {% if pattern_in_progress %}
@@ -54,12 +61,17 @@ You have a cache pattern question in progress that you can <a href="{% url 'last
 </p>
 {% else %}
 <p>
-You can review your <a href="{% url 'last-pattern-question' %}">last answer</a> or
-    or <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">request a new question</button></form></p>
+You can <button formmethod="POST" formaction="{% url 'new-pattern-question' %}">request a new question</button>
+</p>
+{% endif %}
+{% if not pattern_in_progress and pattern_complete > 0 %}
+<p>
+You can also review your <a href="{% url 'last-pattern-question' %}">last answer</a>
 </p>
 {% endif %}
 </li>
 </ul>
+</form>
 
 {% if staff %}
 <h2>Special controls for staff testing only:</h2>

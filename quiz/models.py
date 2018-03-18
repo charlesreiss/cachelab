@@ -180,18 +180,23 @@ class CacheParameters(models.Model):
             min_address_bits=8,
             max_address_bits=64,
             address_bits_rounding=8,
-            min_tag_bits=1):
-        num_ways = random.randint(min_ways, max_ways)
-        way_bits = int(math.log2(num_ways)) + 1
-        index_bits = random.randint(min_sets_log, max_sets_log)
-        num_sets = 1 << index_bits
-        offset_bits = random.randint(min_block_size_log, max_block_size_log)
-        block_size = 1 << offset_bits
-        min_tag_bits = max(min_tag_bits, way_bits)
-        min_address_bits = max(min_address_bits, index_bits + offset_bits + min_tag_bits)
-        address_bits = random.randint(min_address_bits, max_address_bits)
-        if address_bits % address_bits_rounding > 0:
-            address_bits += address_bits_rounding - (address_bits % address_bits_rounding)
+            min_tag_bits=1,
+            max_cache_size=128 * 1024 * 1024):
+        while True:
+            num_ways = random.randint(min_ways, max_ways)
+            way_bits = int(math.log2(num_ways)) + 1
+            index_bits = random.randint(min_sets_log, max_sets_log)
+            num_sets = 1 << index_bits
+            offset_bits = random.randint(min_block_size_log, max_block_size_log)
+            block_size = 1 << offset_bits
+            min_tag_bits = max(min_tag_bits, way_bits)
+            min_address_bits = max(min_address_bits, index_bits + offset_bits + min_tag_bits)
+            address_bits = random.randint(min_address_bits, max_address_bits)
+            if address_bits % address_bits_rounding > 0:
+                address_bits += address_bits_rounding - (address_bits % address_bits_rounding)
+            cache_size = num_ways * block_size * num_sets
+            if cache_size < max_cache_size:
+                break
         return CacheParameters.get(num_ways=num_ways, num_sets=num_sets, block_size=block_size, address_bits=address_bits)
 
 
@@ -276,17 +281,14 @@ class ParameterQuestion(models.Model):
     given_parts = property(get_given_parts, set_given_parts)
 
     def find_cache_property(self, name):
-        if name == 'tag_bits':
-            return self.parameters.tag_bits_for_address_bits(self.address_bits)
-        else:
-            return getattr(self.parameters, name)
+        return getattr(self.parameters, name)
    
     @staticmethod
     def generate_new(for_user):
         which_given = list(random.choice(all_cache_given_sets))
         which_parameters = CacheParameters.random()
         q = ParameterQuestion()
-        last_question = ParameterQuestion.last_question_for_user(for_user)
+        last_question = ParameterQuestion.last_for_user(for_user)
         if last_question != None:
             q.index = last_question.index + 1
         else:
@@ -299,7 +301,7 @@ class ParameterQuestion(models.Model):
         return q
 
     @staticmethod
-    def last_question_for_user(for_user):
+    def last_for_user(for_user):
         return ParameterQuestion.objects.filter(for_user__exact=for_user).order_by('-index').first()    
 
 
@@ -309,8 +311,10 @@ class ParameterAnswer(models.Model):
     submit_time = models.DateTimeField(auto_now=True,editable=False)
     answer_raw = models.TextField()
     was_complete = models.BooleanField()
+    was_save = models.BooleanField()
     score = models.IntegerField()
     score_ratio = models.FloatField()
+    _answer = None
     
     class Meta: 
         indexes = [
@@ -318,46 +322,59 @@ class ParameterAnswer(models.Model):
             models.Index(fields=['for_user', 'was_complete', 'score_ratio']),
         ]
 
-    def set_answer(self, answer):
-        self._answer = _score_answer(answer)
-        self.answer_raw = json.dumps(_score_answer(answer))
+    def set_answer_from_post(self, post):
+        self._answer = self._post_to_scored_answer(post)
+        self.answer_raw = json.dumps(self._answer)
         self.score = self._answer['score']
         self.score_ratio = float(self.score) / self.max_score
+        self.was_complete = self._answer['was_complete']
 
     def get_answer(self):
-        if not self._answer:
+        if self._answer == None:
             self._answer = json.loads(self.answer_raw)
         return self._answer
 
-    answer = property(get_answer, set_answer)
+    answer = property(get_answer)
 
     @property
     def max_score(self):
         return len(self.question.missing_parts)
 
-    def _score_answer(self, answer):
+    def _post_to_scored_answer(self, answer):
         score = 0
+        incomplete = False
+        result = {}
         for item in self.question.missing_parts:
-            invalid_p = value_from_any(self.answer.get(item)) == None
-            correct_p = value_from_any(self.answer.get(item)) == self.question.find_cache_property(item)
-            answer[item + '_invalid'] = invalid_p
-            answer[item  + '_correct'] = correct_p
+            result[item] = answer.get(item, '')
+            invalid_p = value_from_any(answer.get(item)) == None
+            correct_p = value_from_any(answer.get(item)) == self.question.find_cache_property(item)
+            result[item + '_invalid'] = invalid_p
+            if invalid_p:
+                incomplete = True
+            result[item  + '_correct'] = correct_p
             if correct_p:
                 score += 1
-        answer['score'] = score
-        return answer
+        result['score'] = score
+        result['was_complete'] = not incomplete
+        return result
 
     @staticmethod
-    def last_for_question(question):
-        return ParameterAnswer.objects.filter(question=question).order_by('-submit_time').first()
+    def last_for_question_and_user(question, user):
+        if question == None:
+            return None
+        return ParameterAnswer.objects.filter(question=question, for_user=user).order_by('-submit_time').first()
+
+    @staticmethod
+    def last_for_user(user):
+        return ParameterAnswer.objects.filter(for_user=username).order_by('-submit_time').first()
     
     @staticmethod
-    def num_complete_for_user(username, K):
-        return ParameterAnswer.objects.filter(for_user=username, was_complete=True).count()
+    def num_complete_for_user(user):
+        return ParameterAnswer.objects.filter(for_user=user, was_complete=True).count()
     
     @staticmethod
-    def best_K_for_user(username, K):
-        return ParameterAnswer.objects.filter(for_user=username, was_complete=True).order_by('-score_ratio', '-submit_time')[:K]
+    def best_K_for_user(user, K):
+        return ParameterAnswer.objects.filter(for_user=user, was_complete=True).order_by('-score_ratio', '-submit_time')[:K]
 
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
@@ -717,12 +734,12 @@ class PatternQuestion(models.Model):
         return self.pattern.address_bits
 
     @staticmethod
-    def last_question_for_user(for_user):
+    def last_for_user(for_user):
         return PatternQuestion.objects.filter(for_user__exact=for_user).order_by('-index').first()    
 
     @staticmethod
     def generate_random(parameters, for_user, **extra_args):
-        last_question = PatternQuestion.last_question_for_user(for_user)
+        last_question = PatternQuestion.last_for_user(for_user)
         if last_question:
             index = last_question.index + 1
         else:
@@ -753,12 +770,18 @@ sizes = {
         }
 
 def value_from_any(x):
-    x = x.tolower().trim()
+    if x == None:
+        return None
+    x = x.lower().strip()
+    if x == '':
+        return None
     if x[-1] == 'b':
         x = x[:-1]
+    if x == '':
+        return None
     if x[-1] in sizes:
         try:
-            return int(x[:-1].trim())
+            return int(x[:-1].strip())
         except TypeError:
             return None
         except ValueError:
@@ -831,8 +854,10 @@ class PatternAnswer(models.Model):
         return submitted_results
 
     @staticmethod
-    def last_for_question(question):
-        return PatternAnswer.objects.filter(question=question).order_by('-submit_time').first()
+    def last_for_question_and_user(question, for_user):
+        if question == None:
+            return None
+        return PatternAnswer.objects.filter(question=question, for_user=for_user).order_by('-submit_time').first()
 
     @staticmethod
     def best_complete_for_user(user):
