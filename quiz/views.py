@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import permission_required, login_required
 
-from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, all_cache_question_parameters
+from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, ResultItem, all_cache_question_parameters
 
 logger = logging.getLogger('cachelabweb')
 
@@ -235,26 +235,25 @@ def parameter_question_detail(request, question_id):
         show_correct = False
     for item in all_cache_question_parameters:
         if item in question.given_parts:
-            value = format_value_with_postfix(question.find_cache_property(item))
-            correct_p = True
-            invalid_p = False
+            value = ResultItem(
+                value=question.find_cache_property(item),
+                string=format_value_with_postfix(question.find_cache_property(item)),
+                correct=True,
+                invalid=False,
+            )
             given_p = True
         elif item in question.missing_parts:
-            if last_answer:
-                value = last_answer.answer.get(item, '')
-                correct_p = last_answer.answer.get(item + '_correct', False)
-                invalid_p = last_answer.answer.get(item + '_invalid', True)
-            else:
-                value = ''
-                correct_p = False
-                invalid_p = True
             given_p = False
+            if last_answer:
+                value = last_answer.answer.get(item)
+            else:
+                value = ResultItem.empty_invalid()
+        else:
+            continue
         current = {
             'id': item,
             'name': _name_parameter(item),
             'value': value,
-            'correct': correct_p,
-            'invalid': invalid_p,
             'given': given_p,
             'correct_value': format_value_with_postfix(question.find_cache_property(item)),
         }

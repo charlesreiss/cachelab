@@ -33,19 +33,19 @@ When the size of a set, way, or cache is asked for, do not include metadata (lik
     {% if row.given %}
     <tr>
         <td class="paramLabel">{{row.name}}:</td>
-        <td><tt class="givenanswer">{{row.value}}</tt></td>
+        <td><tt class="givenanswer">{{row.value.string}}</tt></td>
     </tr>
     {% else %}
     <tr 
-        {% if mark_invalid and row.invalid %}
+        {% if mark_invalid and row.value.invalid %}
         class="missing"
         {% endif %}
     >
         <td class="paramLabel"><label for="{{row.id}}">{{ row.name }}:</label></td>
         <td><input 
             {% if show_correct %} disabled {% endif %}
-            type="text" id="{{row.id}}" value="{{row.value}}" name="{{row.id}}">
-        {% if show_correct %} {% if not row.correct %} (incorrect; correct answer: {{row.correct_value}}) {% else %} (correct) {% endif %} {% endif %}</td>
+            type="text" id="{{row.id}}" value="{{row.value.string}}" name="{{row.id}}">
+        {% if show_correct %} {% if not row.value.correct %} (incorrect; correct answer: {{row.correct_value}}) {% else %} (correct) {% endif %} {% endif %}</td>
     </tr>
     {% endif %}
 {% endfor %}

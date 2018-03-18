@@ -207,16 +207,16 @@ class ParameterSubmitTest(TestCase):
         self.assertEqual(question_form.context['show_correct'], False)
         self.assertEqual(question_form.context['mark_invalid'], False)
         self.assertEqual(question_form.context['params'], [
-            {'id': 'tag_bits', 'name': 'tag bits', 'value': '', 'correct_value': '1', 'correct': False, 'invalid': True, 'given': False},
-            {'id': 'index_bits', 'name': 'index bits', 'value': '7', 'correct_value': '7', 'correct': True, 'invalid': False, 'given': True},
-            {'id': 'offset_bits', 'name': 'offset bits', 'value': '', 'correct_value': '8', 'correct': False, 'invalid': True, 'given': False},
-            {'id': 'cache_size_bytes', 'name': 'cache size (bytes)', 'value': '', 'correct_value': '224K', 'correct': False, 'invalid': True, 'given': False},
-            {'id': 'num_sets', 'name': 'number of sets', 'value': '', 'correct_value': '128', 'correct': False, 'invalid': True, 'given': False},
-            {'id': 'num_ways', 'name': 'number of ways', 'value': '7', 'correct_value': '7', 'correct': True, 'invalid': False, 'given': True},
-            {'id': 'block_size', 'name': 'block size (bytes)', 'value': '256', 'correct_value': '256', 'correct': True, 'invalid': False, 'given': True},
-            {'id': 'set_size_bytes', 'name': 'total bytes per set', 'value': '', 'correct_value': '1792', 'correct': False, 'invalid': True, 'given': False},
-            {'id': 'way_size_bytes', 'name': 'total bytes per way', 'value': '', 'correct_value': '32K', 'correct': False, 'invalid': True, 'given': False},
-            {'id': 'address_bits', 'name': 'address bits', 'value': '16', 'correct_value': '16', 'correct': True, 'invalid': False, 'given': True},
+            {'id': 'tag_bits', 'name': 'tag bits', 'value': ResultItem.empty_invalid(), 'correct_value': '1', 'given': False},
+            {'id': 'index_bits', 'name': 'index bits', 'value': ResultItem(string='7',value=7,correct=True,invalid=False), 'correct_value': '7', 'given': True},
+            {'id': 'offset_bits', 'name': 'offset bits', 'value': ResultItem.empty_invalid(), 'correct_value': '8', 'given': False},
+            {'id': 'cache_size_bytes', 'name': 'cache size (bytes)', 'value': ResultItem.empty_invalid(), 'correct_value': '224K','given': False},
+            {'id': 'num_sets', 'name': 'number of sets', 'value': ResultItem.empty_invalid(), 'correct_value': '128', 'given': False},
+            {'id': 'num_ways', 'name': 'number of ways', 'value': ResultItem(string='7',value=7,correct=True,invalid=False), 'correct_value': '7', 'given': True},
+            {'id': 'block_size', 'name': 'block size (bytes)', 'value': ResultItem(string='256',value=256,correct=True,invalid=False), 'correct_value': '256', 'given': True},
+            {'id': 'set_size_bytes', 'name': 'total bytes per set', 'value': ResultItem.empty_invalid(), 'correct_value': '1792','given': False},
+            {'id': 'way_size_bytes', 'name': 'total bytes per way', 'value': ResultItem.empty_invalid(), 'correct_value': '32K', 'given': False},
+            {'id': 'address_bits', 'name': 'address bits', 'value': ResultItem(string='16',value=16,correct=True,invalid=False), 'correct_value': '16','given': True},
         ])
         response = c.post('/submit-parameter-answer/{}'.format(question.question_id), {
             'tag_bits': '  1  ',

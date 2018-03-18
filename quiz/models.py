@@ -56,6 +56,10 @@ class ResultItem():
         self.invalid = invalid
         self.correct = correct
 
+    @staticmethod
+    def empty_invalid():
+        return ResultItem(None, string='', invalid=True, correct=False)
+
     def __repr__(self):
         return '{} ({},invalid={},correct={})'.format(
             str(self.string),
@@ -71,7 +75,6 @@ class ResultItem():
             self.invalid == other.invalid and
             self.correct == other.correct
         )
-            
 
 class CacheAccessResult():
     @staticmethod
@@ -394,14 +397,13 @@ class ParameterAnswer(models.Model):
 
     def set_answer_from_post(self, post):
         self._answer = self._post_to_scored_answer(post)
-        self.answer_raw = json.dumps(self._answer)
-        self.score = self._answer['score']
+        self.answer_raw = json.dumps({k: vars(v) for k, v in self._answer.items()})
         self.score_ratio = float(self.score) / self.max_score
-        self.was_complete = self._answer['was_complete']
 
     def get_answer(self):
         if self._answer == None:
-            self._answer = json.loads(self.answer_raw)
+            answer_dict = json.loads(self.answer_raw)
+            self._answer = {k: ResultItem(**v) for k, v in answer_dict.items()}
         return self._answer
 
     answer = property(get_answer)
@@ -415,17 +417,22 @@ class ParameterAnswer(models.Model):
         incomplete = False
         result = {}
         for item in self.question.missing_parts:
-            result[item] = answer.get(item, '')
-            invalid_p = value_from_any(answer.get(item)) == None
-            correct_p = value_from_any(answer.get(item)) == self.question.find_cache_property(item)
-            result[item + '_invalid'] = invalid_p
+            string = answer.get(item, '')
+            value = value_from_any(string)
+            invalid_p = value == None
+            correct_p = value == self.question.find_cache_property(item)
             if invalid_p:
                 incomplete = True
-            result[item  + '_correct'] = correct_p
+            result[item] = ResultItem(
+                value=value,
+                string=string,
+                invalid=invalid_p,
+                correct=correct_p
+            )
             if correct_p:
                 score += 1
-        result['score'] = score
-        result['was_complete'] = not incomplete
+        self.score = score
+        self.was_complete = not incomplete
         return result
 
     @staticmethod

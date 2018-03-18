@@ -59,7 +59,7 @@ The first {{ give_first }} answers are given.
             {{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.parameters.address_bits %}</code>: <br>
             <!-- tag --> 
             <label for="access_index_{{ forloop.counter0 }}"
-                {% if show_invalid and old_answer.tag_invalid %} class="missing" {% endif %}
+                {% if show_invalid and old_answer.tag.invalid %} class="missing" {% endif %}
             >tag:</label>
             <input type="text" id="access_tag_{{ forloop.counter0 }}"
                 name="access_tag_{{ forloop.counter0 }}"
