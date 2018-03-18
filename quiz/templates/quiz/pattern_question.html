@@ -130,7 +130,7 @@ The first {{ give_first }} answers are given.
                         onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
                     ><label for="access_hit_{{ forloop.counter0 }}_ismiss_evict">miss, </label>
                     <!-- miss/evict address -->
-                    <label for="access_evicted_{{ forloop.counter0 }} 
+                    <label for="access_evicted_{{ forloop.counter0 }}"
                         {% if show_invalid and old_answer.evicted.invalid %} class="missing" {% endif %}>evicting</label>
                     <input type="text" id ="access_evicted_{{ forloop.counter0 }}" name="access_evicted_{{ forloop.counter0 }}" 
                         {% if old_answer.evicted.value != None %} value="{{ old_answer.evicted.string }}" {% endif %}
