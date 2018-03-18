@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import permission_required, login_required
 
-from .models import PatternAnswer, PatternQuestion, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, all_cache_question_parameters
+from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, all_cache_question_parameters
 
 logger = logging.getLogger('cachelabweb')
 
@@ -90,44 +90,21 @@ def new_pattern_question(request):
 def test_control(request):
     return HttpResponse(render(request, 'quiz/test_control.html', {}))
 
-"""Convert a computed access result to the same format as a user supplied answer."""
-def _convert_given_access_result(access_result):
-    result = {}
-    for key in ['tag', 'index', 'offset', 'evicted']:
-        result[key + '_invalid'] = False
-        if getattr(result, key) != None:
-            result[key] = '0x{:x}'.format(getattr(result, key))
-    result['hit_invalid'] = False
-    return result
-    
 def pattern_question_detail(request, question_id):
     question = PatternQuestion.objects.get(question_id=question_id)
     if question.for_user != request.user.get_username():
         raise PermissionDenied()
     answer = PatternAnswer.last_for_question_and_user(question, request.user.get_username())
-    empty_access = {
-        'hit': None,
-        'tag': '',
-        'index': '',
-        'offset': '',
-        'tag_correct': None,
-        'index_correct': None,
-        'offset_correct': None,
-        'hit_correct': None,
-        'tag_invalid': True,
-        'index_invalid': True,
-        'offset_invalid': True,
-        'hit_invalid': True,
-        'evicted': None,
-    }
+    empty_access = CacheAccessResult.empty()
     is_given = itertools.chain([True] * question.give_first, itertools.cycle([False]))
     if answer:
         accesses_with_default = zip(question.pattern.accesses, answer.access_results, question.pattern.access_results, is_given)
     else:
         old_answers = [empty_access] * len(question.pattern.accesses)
         for i in range(question.give_first):
-            old_answers[i] = _convert_given_access_result(question.pattern.access_results[i])
+            old_answers[i] = question.pattern.access_results[i]
         accesses_with_default = zip(question.pattern.accesses, old_answers, question.pattern.access_results, is_given)
+    accesses_with_default = list(accesses_with_default)
     widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4)
     context = {
         'question': question,
@@ -171,35 +148,35 @@ def pattern_answer(request, question_id):
         parts.append('evicted')
     logger.debug('POST request is %s', request.POST)
     for i in range(question.give_first):
-        submitted_results.append(_convert_given_access_result(question.pattern.access_results[i]))
+        submitted_results.append(question.pattern.access_results[i])
     for i in range(question.give_first, len(question.pattern.access_results)):
         cur_access = CacheAccessResult()
         hit_key = 'access_hit_{}'.format(i)
         if hit_key in request.POST:
             hit_value = request.POST[hit_key]
-            cur_access.hit_invalid = False
         else:
-            hit_value = None
-            cur_access.hit_invalid = True
+            cur_access.set_invalid('hit')
         if hit_value == 'hit':
-            cur_access.hit = True
+            cur_access.set_bool('hit', True)
         elif hit_value != None and hit_value.startswith('miss'):
-            cur_access.hit = False
+            cur_access.set_bool('hit', False)
         else:
-            cur_access.hit = None
+            cur_access.set_bool('hit', None)
         for which in ['tag', 'index', 'offset']:
             key = 'access_{}_{}'.format(which, i)
             if key in request.POST:
                 value = request.POST[key].strip()
             else:
                 value = ''
-            is_complete = is_complete and cur_access.set_from_string(which, value)
+            value_invalid = cur_access.set_from_string(which, value)
+            is_complete = is_complete and value_invalid
         if hit_value != 'miss-evict':
             cur_access.set_from_string('evicted', '')
             cur_access.evicted.invalid = False
         else:
             value = request.POST.get('access_evicted_{}'.format(i), '')
-            is_complete = is_complete and cur_access.set_from_string('evicted', value)
+            value_invalid = cur_access.set_from_string('evicted', value)
+            is_complete = is_complete and value_invalid
         logger.debug('adding access %s', cur_access)
         submitted_results.append(cur_access)
     answer.access_results = submitted_results

@@ -63,7 +63,7 @@ The first {{ give_first }} answers are given.
             >tag:</label>
             <input type="text" id="access_tag_{{ forloop.counter0 }}"
                 name="access_tag_{{ forloop.counter0 }}"
-                value="{{ old_answer.tag_string }}"
+                value="{{ old_answer.tag.string }}"
                 {% if show_correct or is_given %} disabled {% endif %} size="{{tag_width}}"
             >
             {% if show_correct %}
@@ -76,7 +76,7 @@ The first {{ give_first }} answers are given.
             >index:</label>
             <input type="text" id="access_index_{{ forloop.counter0 }}"
                    name="access_index_{{ forloop.counter0 }}"
-                   value="{{ old_answer.index_string }}"
+                   value="{{ old_answer.index.string }}"
                    {% if show_correct or is_given %} disabled {% endif %} size="{{index_width}}"
             >
             {% if show_correct %}
@@ -148,7 +148,7 @@ The first {{ give_first }} answers are given.
                      {% if actual_answer.hit.value %}
                         hit
                      {% elif actual_answer.evicted.value != None %}
-                        miss evicting {% actual_answer.evicted.string %}
+                        miss evicting {{ actual_answer.evicted.string }}
                      {% else %}
                         miss evicting nothing
                     {% endif %})

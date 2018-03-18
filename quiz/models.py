@@ -34,6 +34,12 @@ class CacheAccess():
             'kind': self.kind,
         }
 
+    def __repr__(self):
+        return 'CacheAccess[0x{:x},kind={},size={}]'.format(self.address, self.kind, self.size)
+
+    def __eq__(self, other):
+        return self.address == other.address and self.size == other.size
+
 def format_hex(value, bits=None):
     if value == None:
         return ''
@@ -50,6 +56,23 @@ class ResultItem():
         self.invalid = invalid
         self.correct = correct
 
+    def __repr__(self):
+        return '{} ({},invalid={},correct={})'.format(
+            str(self.string),
+            hex(self.value) if self.value != None else '(none)',
+            str(self.invalid),
+            str(self.correct),
+        )
+
+    def __eq__(self, other):
+        return (
+            self.string == other.string and
+            self.value == other.value and
+            self.invalid == other.invalid and
+            self.correct == other.correct
+        )
+            
+
 class CacheAccessResult():
     @staticmethod
     def from_reference(hit, tag, index, offset, evicted, tag_bits=None, index_bits=None, offset_bits=None, address_bits=None):
@@ -61,16 +84,39 @@ class CacheAccessResult():
         self.evicted = ResultItem(value=evicted, string=format_hex(evicted, address_bits))
         return self
 
+    @staticmethod
+    def empty():
+        self = CacheAccessResult()
+        self.hit = ResultItem(None, string='', invalid=True)
+        self.tag = ResultItem(None, string='', invalid=True)
+        self.index = ResultItem(None, string='', invalid=True)
+        self.offset = ResultItem(None, string='', invalid=True)
+        self.evicted = ResultItem(None, string='', invalid=True)
+        return self
 
     def set_from_string(self, key, value):
         int_value = value_from_hex(value)
-        self.__dict__[key] = {
-            'value': int_value,
-            'string': value,
-            'invalid': int_value == None,
-            'correct': None,
-        }
+        self.__dict__[key] = ResultItem(
+            value=int_value,
+            string=value,
+            invalid=int_value==None,
+            correct=None
+        )
         return int_value != None
+
+    def set_bool(self, key, value):
+        self.__dict__[key] = ResultItem(
+            value=value,
+            invalid=False,
+            correct=None
+        )
+
+    def set_invalid(self, key):
+        self.__dict__[key] = ResultItem(
+            value=None,
+            invalid=True,
+            correct=None
+        )
 
     def as_dump_reference(self):
         return {
@@ -82,7 +128,31 @@ class CacheAccessResult():
         }
     
     def as_dump(self):
-        return vars(self)
+        return {
+            'hit': vars(self.hit),
+            'tag': vars(self.tag),
+            'index': vars(self.index),
+            'offset': vars(self.offset),
+            'evicted': vars(self.evicted),
+        }
+
+    def __repr__(self):
+        return 'CacheAccessResult[hit={},tag={},index={},offset={},evicted={}]'.format(
+            repr(self.hit),
+            repr(self.tag),
+            repr(self.index),
+            repr(self.offset),
+            repr(self.evicted),
+        )
+
+    def __eq__(self, other):
+        return (
+            self.hit == other.hit and
+            self.tag == other.tag and
+            self.index == other.index and
+            self.offset == other.offset and
+            self.evicted == other.evicted
+        )
 
 class CacheEntry():
     def __init__(self, data):
@@ -820,7 +890,7 @@ class PatternAnswer(models.Model):
 
     def set_access_results(self, value):
         self._access_results = self._score_answer(value)
-        self.access_results_raw = json.dumps(map(lambda x: x.as_dump(), self._access_results))
+        self.access_results_raw = json.dumps(list(map(lambda x: x.as_dump(), self._access_results)))
 
     access_results = property(get_access_results, set_access_results)
 
@@ -828,27 +898,24 @@ class PatternAnswer(models.Model):
         expected_results = self.question.pattern.access_results
         score = 0
         max_score = 0
-        i = 0
-        for submitted, expected in zip(submitted_results, expected_results):
-            if i >= self.question.give_first:
-                max_score += 5
+        for i, (submitted, expected) in enumerate(zip(submitted_results, expected_results)):
+            if i < self.question.give_first:
+                continue
+            max_score += 5
             if submitted.hit.value == expected.hit.value:
-                if i >= self.question.give_first:
-                    score += 1
+                score += 1
                 submitted.hit.correct = True
             else:
                 submitted.hit.correct = False
             for which in ['tag', 'index', 'offset']:
-                if getattr(submitted, which).value == expected[which]:
+                if getattr(submitted, which).value == getattr(expected, which).value:
                     getattr(submitted, which).correct = True
-                    if i >= self.question.give_first:
-                        score += 1
+                    score += 1
                 else:
                     getattr(submitted, which).correct = False
             if expected.evicted.value == submitted.evicted.value:
                 score += 1
                 submitted.evicted.correct = True
-            i += 1
         self.score = score
         self.max_score = max_score
         return submitted_results

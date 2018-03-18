@@ -54,6 +54,14 @@ class PatternQuestionTest(TestCase):
                                     if expect_type == 'conflict_miss':
                                         self.assertTrue(result.evicted.value != None)
 
+def login_as(client, username):
+    from django.contrib.auth.models import User
+    try:
+        account = User.objects.get(username=username)
+    except User.DoesNotExist:
+        account = User.objects.create_user(username)
+    client.force_login(account) 
+
 class PatternEvaluateTest(TestCase):
     def test_evaluate_simple(self):
         pattern = CachePattern()
@@ -85,13 +93,96 @@ class PatternEvaluateTest(TestCase):
             self.assertEquals(expected.offset.value, actual.offset.value)
             self.assertEquals(expected.evicted.value, actual.evicted.value)
 
-def login_as(client, username):
-    from django.contrib.auth.models import User
-    try:
-        account = User.objects.get(username=username)
-    except User.DoesNotExist:
-        account = User.objects.create_user(username)
-    client.force_login(account) 
+class PatternSubmitTest(TestCase):
+    def test_evaluate_simple(self):
+        pattern = CachePattern()
+        # 4 offset bits, 4 set bits, 8 tag bits
+        pattern.parameters = CacheParameters.get(num_ways=3,num_sets=16,block_size=16,address_bits=16)
+        pattern.accesses = [
+            CacheAccess(0x0123), # miss
+            CacheAccess(0x0123), # hit
+            CacheAccess(0x0223), # miss
+            CacheAccess(0x0323), # miss
+            CacheAccess(0x0123), # hit
+            CacheAccess(0x0423), # miss, evicting 0x0220
+            CacheAccess(0x0523), # miss, evicting 0x0320
+        ]
+        pattern.save()
+        #expected_results = [
+        #0    CacheAccessResult.from_reference(False, 0x01, 0x2, 0x3, None),
+        #1    CacheAccessResult.from_reference(True,  0x01, 0x2, 0x3, None),
+        #2    CacheAccessResult.from_reference(False, 0x02, 0x2, 0x3, None),
+        #3    CacheAccessResult.from_reference(False, 0x03, 0x2, 0x3, None),
+        #4    CacheAccessResult.from_reference(True,  0x01, 0x2, 0x3, None),
+        #5    CacheAccessResult.from_reference(False, 0x04, 0x2, 0x3, 0x0220),
+        #6    CacheAccessResult.from_reference(False, 0x05, 0x2, 0x3, 0x0320),
+        #]
+        question = PatternQuestion()
+        question.index = 0
+        question.pattern = pattern
+        question.for_user = 'test'
+        question.give_first = 1
+        question.save()
+        c = Client()
+        login_as(c, 'test')
+        question_form = c.get('/pattern-question')
+        logger.debug('question_form : %s', question_form)
+        self.assertEqual(question_form.context['show_correct'], False)
+        self.assertEqual(question_form.context['show_invalid'], False)
+        self.assertEqual(question_form.context['accesses_with_default_and_correct_and_given'][0],
+            (CacheAccess(0x0123),
+             CacheAccessResult.from_reference(False, 0x01, 0x2, 0x3, None, tag_bits=8),
+             CacheAccessResult.from_reference(False, 0x01, 0x2, 0x3, None, tag_bits=8),
+             True)
+        )
+        self.assertEqual(question_form.context['accesses_with_default_and_correct_and_given'][-1],
+            (CacheAccess(0x0523),
+             CacheAccessResult.empty(),
+             CacheAccessResult.from_reference(False, 0x05, 0x2, 0x3, 0x320, tag_bits=8, address_bits=16),
+             False)
+        )
+        response = c.post('/submit-pattern-answer/{}'.format(question.question_id), {
+            'access_hit_1':    'hit',
+            'access_tag_1':    '0x1',
+            'access_index_1':  '0x2',
+            'access_offset_1': '0x3',
+
+            'access_hit_2':    'miss-noevict',
+            'access_tag_2':    '0x2',
+            'access_index_2':  '0x2',
+            'access_offset_2': '0x3',
+
+            'access_hit_3':    'miss-noevict',
+            'access_tag_3':    '0x3',
+            'access_index_3':  '0x2',
+            'access_offset_3': '0x3',
+
+            'access_hit_4':    'hit',
+            'access_tag_4':    '0x1',
+            'access_index_4':  '0x2',
+            'access_offset_4': '0x3',
+
+            'access_hit_5':    'miss-evict',
+            'access_tag_5':    '0x4',
+            'access_index_5':  '0x2',
+            'access_offset_5': '0x3',
+            'access_evicted_5':  '220',
+
+            'access_hit_6':    'miss-evict',
+            'access_tag_6':    '0x5',
+            'access_index_6':  '0x2',
+            'access_offset_6': '0x3',
+            'access_evicted_6':  '0x0000000000000320',
+        })
+        logger.debug('POST response was %s', response)
+        self.assertTrue(response.status_code >= 300 and response.status_code < 400)
+        last_answer = PatternAnswer.last_for_question_and_user(question, 'test')
+        self.assertTrue(last_answer.was_complete)
+        self.assertFalse(last_answer.was_save)
+        self.assertEqual(last_answer.score, 6 * 5)
+        self.assertEqual(last_answer.max_score, 6 * 5)
+
+
 
 class ParameterSubmitTest(TestCase):
     def test_evaluate_simple(self):
