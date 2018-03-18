@@ -23,9 +23,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from .secret_settings import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+#DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG_ON', 'false') == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'archimedes.cs.virginia.edu'
+]
 
 
 # Application definition
@@ -139,3 +142,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+X_FRAME_OPTIONS = 'DENY'
+
