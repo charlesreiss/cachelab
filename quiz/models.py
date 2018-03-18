@@ -439,19 +439,19 @@ class ParameterAnswer(models.Model):
     def last_for_question_and_user(question, user):
         if question == None:
             return None
-        return ParameterAnswer.objects.filter(question=question, for_user=user).order_by('-submit_time').first()
+        return ParameterAnswer.objects.filter(question=question, for_user__exact=user).order_by('-submit_time').first()
 
     @staticmethod
     def last_for_user(user):
-        return ParameterAnswer.objects.filter(for_user=username).order_by('-submit_time').first()
+        return ParameterAnswer.objects.filter(for_user__exact=username).order_by('-submit_time').first()
     
     @staticmethod
     def num_complete_for_user(user):
-        return ParameterAnswer.objects.filter(for_user=user, was_complete=True).count()
+        return ParameterAnswer.objects.filter(for_user__exact=user, was_complete=True).count()
     
     @staticmethod
     def best_K_for_user(user, K):
-        return ParameterAnswer.objects.filter(for_user=user, was_complete=True).order_by('-score_ratio', '-submit_time')[:K]
+        return ParameterAnswer.objects.filter(for_user__exact=user, was_complete=True).order_by('-score_ratio', '-submit_time')[:K]
 
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
@@ -931,16 +931,16 @@ class PatternAnswer(models.Model):
     def last_for_question_and_user(question, for_user):
         if question == None:
             return None
-        return PatternAnswer.objects.filter(question=question, for_user=for_user).order_by('-submit_time').first()
+        return PatternAnswer.objects.filter(question=question, for_user__exact=for_user).order_by('-submit_time').first()
 
     @staticmethod
     def best_complete_for_user(user):
-        return PatternAnswer.objects.filter(for_user=user,was_complete=True).order_by('-score').first()
+        return PatternAnswer.objects.filter(for_user__exact=user,was_complete=True).order_by('-score').first()
 
     @staticmethod
     def num_complete_for_user(user):
-        return PatternAnswer.objects.filter(for_user=user,was_complete=True).count()
+        return PatternAnswer.objects.filter(for_user__exact=user,was_complete=True).count()
 
     @staticmethod
     def last_for_user(user):
-        return PatternAnswer.objects.filter(for_user=user).order_by('-submit_time').first()
+        return PatternAnswer.objects.filter(for_user__exact=user).order_by('-submit_time').first()
