@@ -66,18 +66,21 @@ def index_page(request):
         context['parameter_score{}_max'.format(i+1)] = answer.max_score
     return HttpResponse(render(request, 'quiz/user_index.html', context))
 
+def random_parameters_for_pattern():
+    return CacheParameters.random(
+        min_ways=2, max_ways=3,
+        min_sets_log=3, max_sets_log=5,
+        min_block_size_log=1, max_block_size_log=3,
+        min_address_bits=16, max_address_bits=16,
+    )
+
+
 @login_required
 def last_pattern_question(request):
     question = PatternQuestion.last_for_user(request.user.get_username())
     if not question:
-        parameters = CacheParameters.random(
-            min_ways=2, max_ways=3,
-            min_sets_log=3, max_sets_log=5,
-            min_block_size_log=1, max_block_size_log=3,
-            min_address_bits=16, max_address_bits=16,
-        )
         PatternQuestion.generate_random(
-            parameters=parameters, for_user=request.user.get_username()
+            parameters=random_parameters_for_pattern(), for_user=request.user.get_username()
         )
         question = PatternQuestion.last_for_user(request.user.get_username())
     return pattern_question_detail(request, question.question_id)
@@ -85,10 +88,7 @@ def last_pattern_question(request):
 @login_required
 @require_http_methods(["POST"])
 def new_pattern_question(request):
-    parameters = CacheParameters.objects.first()
-    if parameters == None:
-        parameters = CacheParameters()
-        parameters.save()
+    parameters = random_parameters_for_pattern()
     PatternQuestion.generate_random(parameters=parameters, for_user=request.user.get_username())
     return redirect('last-pattern-question')
 
