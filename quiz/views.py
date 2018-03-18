@@ -37,7 +37,7 @@ def index_page(request):
     if last_pattern_answer != None and last_pattern_answer.question == last_pattern_question:
         last_pattern_in_progress = not last_pattern_answer.was_complete
     else:
-        last_pattern_in_progress = False
+        last_pattern_in_progress = True
     num_pattern_answer = PatternAnswer.num_complete_for_user(user)
     if num_pattern_answer > 0:
         best_pattern_answer = PatternAnswer.best_complete_for_user()
