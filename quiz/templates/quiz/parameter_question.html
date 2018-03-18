@@ -1,9 +1,9 @@
 {% extends "quiz/base_generic.html" %}
 
-
 {% block title %}{% if show_correct %}CacheLab: cache parameter question (results){% else %}CacheLab: access pattern question{% endif %}{% endblock %}
 
 {% block content %}
+<p><a href="{% url 'user-index' %}">return to lab index page</a></p>
 <h1>CacheLab: cache parameter question</h1>
 <p>
 You are logged in as <strong>{{user}}</strong>.

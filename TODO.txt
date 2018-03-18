@@ -2,6 +2,8 @@ Necessary features:
     - login support
 
 Things to add:
+    - submit time timezones
+    - correct login redirect
     - verify correct answer showing
         - ideally automated tests for answer identification
     - vary cache parameters slightly for pattern questions
