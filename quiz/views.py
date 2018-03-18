@@ -15,7 +15,7 @@ from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePatt
 
 logger = logging.getLogger('cachelabweb')
 
-
+NEEDED_PARAMETER_PERFECT = 3
 
 @login_required
 def index_page(request):
@@ -27,7 +27,7 @@ def index_page(request):
     else:
         last_parameter_in_progress = False
     num_parameter_answer = ParameterAnswer.num_complete_for_user(user)
-    best_parameter_answers = ParameterAnswer.best_K_for_user(user, 3)
+    best_parameter_answers = ParameterAnswer.best_K_for_user(user, NEEDED_PARAMETER_PERFECT)
     parameter_perfect_count = 0
     for answer in best_parameter_answers:
         if answer.score == answer.max_score:
@@ -51,7 +51,7 @@ def index_page(request):
         'parameter_in_progress': last_parameter_in_progress,
         'parameter_complete': num_parameter_answer,
         'parameter_perfect_count':  parameter_perfect_count,
-        'parameter_perfect': parameter_perfect_count >= 3,
+        'parameter_perfect': parameter_perfect_count >= NEEDED_PARAMETER_PERFECT,
 
         'pattern_complete': num_pattern_answer,
         'pattern_in_progress': last_pattern_in_progress,
@@ -222,7 +222,8 @@ def format_value_with_postfix(value):
 @login_required
 def parameter_question_detail(request, question_id):
     question = get_object_or_404(ParameterQuestion, question_id=question_id)
-    if question.for_user != request.user.get_username():
+    user = request.user.get_username()
+    if question.for_user != user:
         raise PermissionDenied()
     last_answer = ParameterAnswer.last_for_question_and_user(question, request.user.get_username())
     params = []
@@ -258,12 +259,22 @@ def parameter_question_detail(request, question_id):
             'correct_value': format_value_with_postfix(question.find_cache_property(item)),
         }
         params.append(current)
+    best_parameter_answers = ParameterAnswer.best_K_for_user(user, 3)
+    parameter_perfect_count = 0
+    for answer in best_parameter_answers:
+        if answer.score == answer.max_score:
+            parameter_perfect_count += 1
     context = {
         'show_correct': show_correct,
         'mark_invalid': mark_invalid,
         'params': params,
         'question': question,
         'answer': last_answer,
+
+        'num_perfect': parameter_perfect_count,
+        'perfect': parameter_perfect_count >= NEEDED_PARAMETER_PERFECT,
+        'needed_perfect': NEEDED_PARAMETER_PERFECT,
+        'remaining_perfect': NEEDED_PARAMETER_PERFECT - parameter_perfect_count,
     }
     return HttpResponse(render(request, 'quiz/parameter_question.html', context))
 
