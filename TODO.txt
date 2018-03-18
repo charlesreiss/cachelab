@@ -1,26 +1,28 @@
 Necessary features:
     - login support
-        - TODO: timestamps on forwarded token
 
 Things to add:
+    - verify correct answer showing
+        - ideally automated tests for answer identification
+    - vary cache parameters slightly for pattern questions
+    - backend report interface
+
     X starting interface showing:
         button to get a new question
         status of existing question
         previous score
     - ? interface to set parameters
 
-    - separate questions about cache parameters
-        - maybe: lead into cache access pattern questions
+    X separate questions about cache parameters
     X add splitting up address apppropriately to the cache access patterns
     X ? add what is evicted to the cache access pattern question
-    - ? final state of the cache questions
 
     X selecting accesses based on % hit/miss/conflict miss target?
         should allow for huge cache problems?
 
     - less sensitivity for evicted answer
     X example answers for three (miss/hit/miss-evict)
-    - save answers button
+    X save answers button
 
 Also consider:
     - question with C code?

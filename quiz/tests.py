@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import Client, TestCase
 
 from .models import *
 
@@ -84,4 +84,64 @@ class PatternEvaluateTest(TestCase):
             self.assertEquals(expected.index.value, actual.index.value)
             self.assertEquals(expected.offset.value, actual.offset.value)
             self.assertEquals(expected.evicted.value, actual.evicted.value)
+
+def login_as(client, username):
+    from django.contrib.auth.models import User
+    try:
+        account = User.objects.get(username=username)
+    except User.DoesNotExist:
+        account = User.objects.create_user(username)
+    client.force_login(account) 
+
+class ParameterSubmitTest(TestCase):
+    def test_evaluate_simple(self):
+        param_target = CacheParameters.get(
+            num_ways=7,
+            num_sets=128, # 7 index bits
+            block_size=256, # 8 offset bits
+            address_bits=16 # --> 1 tag bit
+        )
+        question = ParameterQuestion()
+        question.parameters = param_target
+        question.index = 0
+        question.missing_parts = ['tag_bits', 'offset_bits', 'cache_size_bytes', 'num_sets', 'set_size_bytes', 'way_size_bytes']
+        question.given_parts = ['num_ways', 'index_bits', 'block_size', 'address_bits']
+        question.for_user = 'test'
+        question.save()
+        
+        c = Client()
+        login_as(c, 'test')
+        question_form = c.get('/parameter-question')
+        logger.debug('question_form : %s', question_form)
+        self.assertEqual(question_form.context['show_correct'], False)
+        self.assertEqual(question_form.context['mark_invalid'], False)
+        self.assertEqual(question_form.context['params'], [
+            {'id': 'tag_bits', 'name': 'tag bits', 'value': '', 'correct_value': '1', 'correct': False, 'invalid': True, 'given': False},
+            {'id': 'index_bits', 'name': 'index bits', 'value': '7', 'correct_value': '7', 'correct': True, 'invalid': False, 'given': True},
+            {'id': 'offset_bits', 'name': 'offset bits', 'value': '', 'correct_value': '8', 'correct': False, 'invalid': True, 'given': False},
+            {'id': 'cache_size_bytes', 'name': 'cache size (bytes)', 'value': '', 'correct_value': '224K', 'correct': False, 'invalid': True, 'given': False},
+            {'id': 'num_sets', 'name': 'number of sets', 'value': '', 'correct_value': '128', 'correct': False, 'invalid': True, 'given': False},
+            {'id': 'num_ways', 'name': 'number of ways', 'value': '7', 'correct_value': '7', 'correct': True, 'invalid': False, 'given': True},
+            {'id': 'block_size', 'name': 'block size (bytes)', 'value': '256', 'correct_value': '256', 'correct': True, 'invalid': False, 'given': True},
+            {'id': 'set_size_bytes', 'name': 'total bytes per set', 'value': '', 'correct_value': '1792', 'correct': False, 'invalid': True, 'given': False},
+            {'id': 'way_size_bytes', 'name': 'total bytes per way', 'value': '', 'correct_value': '32K', 'correct': False, 'invalid': True, 'given': False},
+            {'id': 'address_bits', 'name': 'address bits', 'value': '16', 'correct_value': '16', 'correct': True, 'invalid': False, 'given': True},
+        ])
+        response = c.post('/submit-parameter-answer/{}'.format(question.question_id), {
+            'tag_bits': '  1  ',
+            'offset_bits': '8',
+            'cache_size_bytes': '    224 K',
+            'num_sets': '128',
+            'set_size_bytes': '1.75K',
+            'way_size_bytes': '32769',
+        })
+        logger.debug('POST response was %s', response)
+        self.assertTrue(response.status_code >= 300 and response.status_code < 400)
+        last_answer = ParameterAnswer.last_for_question_and_user(question, 'test')
+        logger.debug('last_answer answers %s', last_answer.answer)
+        self.assertTrue(last_answer.was_complete)
+        self.assertFalse(last_answer.was_save)
+        self.assertEqual(last_answer.score, 5)
+        self.assertEqual(last_answer.max_score, 6)
+
 

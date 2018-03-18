@@ -224,7 +224,7 @@ def _name_parameter(parameter):
     elif parameter == 'way_size_bytes':
         return 'total bytes per way'
     elif parameter == 'set_size_bytes':
-        return 'total data bytes per set'
+        return 'total bytes per set'
     elif parameter.endswith('_bytes'):
         return parameter[:-len('_bytes')].replace('_', ' ') + ' (bytes)'
     elif parameter == 'block_size':
@@ -259,8 +259,8 @@ def parameter_question_detail(request, question_id):
     for item in all_cache_question_parameters:
         if item in question.given_parts:
             value = format_value_with_postfix(question.find_cache_property(item))
-            correct_p = False
-            invalid_p = True
+            correct_p = True
+            invalid_p = False
             given_p = True
         elif item in question.missing_parts:
             if last_answer:
@@ -270,7 +270,7 @@ def parameter_question_detail(request, question_id):
             else:
                 value = ''
                 correct_p = False
-                invalid_p = False
+                invalid_p = True
             given_p = False
         current = {
             'id': item,

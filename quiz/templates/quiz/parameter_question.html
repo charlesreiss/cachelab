@@ -27,6 +27,7 @@ You can <button formmethod="POST" formaction="{% url 'new-parameter-question' %}
 Fill in the missing cache parameters below.
 Please enter values in <b>base-10</b>. However, you may use the suffices <i>K</i> (for 2 to the 10th), <i>M</i> (for 2 to the 20th), <i>G</i>, and <i>T</i>. For example, to represent then number <tt>32768</tt>, you can enter
 either <tt>32K</tt> or <tt>32768</tt>.
+When the size of a set, way, or cache is asked for, do not include metadata (like valid bits).
 <table>
 {% for row in params %}
     {% if row.given %}

@@ -202,8 +202,8 @@ class CacheParameters(models.Model):
 
 
 all_cache_question_parameters = [
-    'index_bits',
     'tag_bits',
+    'index_bits',
     'offset_bits',
     'cache_size_bytes',
     'num_sets',
@@ -781,7 +781,7 @@ def value_from_any(x):
         return None
     if x[-1] in sizes:
         try:
-            return int(x[:-1].strip())
+            return int(float(x[:-1].strip()) * sizes[x[-1]])
         except TypeError:
             return None
         except ValueError:
