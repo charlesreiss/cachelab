@@ -70,8 +70,12 @@ def index_page(request):
 def last_pattern_question(request):
     question = PatternQuestion.last_for_user(request.user.get_username())
     if not question:
-        parameters = CacheParameters()
-        parameters.save()
+        parameters = CacheParameters.random(
+            min_ways=2, max_ways=3,
+            min_sets_log=3, max_sets_log=5,
+            min_block_size_log=1, max_block_size_log=3,
+            min_address_bits=16, max_address_bits=16,
+        )
         PatternQuestion.generate_random(parameters=parameters, for_user=request.user.get_username())
         question = PatternQuestion.last_for_user(request.user.get_username())
     return pattern_question_detail(request, question.question_id)

@@ -607,8 +607,8 @@ class CachePattern(models.Model):
     """
     @staticmethod
     def generate_random(parameters,
-            num_accesses=13,
-            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'conflict_miss'],
+            num_accesses=14,
+            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'conflict_miss'],
             access_size=2,
             chance_setup_conflict_aggressive=3,
             chance_setup_conflict=2,
