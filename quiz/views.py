@@ -112,6 +112,7 @@ def pattern_question_detail(request, question_id):
         accesses_with_default = zip(question.pattern.accesses, old_answers, question.pattern.access_results, is_given)
     accesses_with_default = list(accesses_with_default)
     widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4)
+    address_width = int((question.address_bits + 3) / 4)
     context = {
         'question': question,
         'answer': answer,
@@ -121,6 +122,7 @@ def pattern_question_detail(request, question_id):
         'tag_width': widths,
         'offset_width': widths,
         'index_width': widths,
+        'evicted_width': address_width,
         'ask_evict': question.ask_evict,
         'give_first': question.give_first,
         'debug_enable': False,
