@@ -100,7 +100,7 @@ The first {{ give_first }} answers are given.
             <fieldset {% if show_invalid and old_answer.hit.invalid and not is_given %}class="missing"{% endif %}>
                 <!-- is hit? -->
                 <input type="radio" id="access_hit_{{ forloop.counter0 }}_ishit" name="access_hit_{{ forloop.counter0 }}" value="hit"
-                    {% if not old_answer.hit.invalid and old_answer.hit == True %} checked {% endif %}
+                    {% if not old_answer.hit.invalid and old_answer.hit.value == True %} checked {% endif %}
                     {% if show_correct or is_given %} disabled {% endif %}
                     {% if ask_evict %}
                         onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
@@ -110,7 +110,7 @@ The first {{ give_first }} answers are given.
                     <!-- is miss/no evict -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_noevict"
                         name="access_hit_{{ forloop.counter0 }}" value="miss-noevict"
-                        {% if not old_answer.hit.invalid and old_answer.hit == False and old_answer.evicted == None %}
+                        {% if not old_answer.hit.invalid and old_answer.hit.value == False and old_answer.evicted.value == None %}
                             checked
                         {% endif %}
                         {% if show_correct or is_given %}
@@ -121,7 +121,7 @@ The first {{ give_first }} answers are given.
                     <!-- is miss/evict -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_evict"
                         name="access_hit_{{ forloop.counter0 }}" value="miss-evict"
-                        {% if not old_answer.hit.invalid and old_answer.hit == False and old_answer.evicted != None %}
+                        {% if not old_answer.hit.invalid and old_answer.hit.value == False and old_answer.evicted.value != None %}
                             checked 
                         {% endif %}
                         {% if show_correct or is_given %}
@@ -134,7 +134,7 @@ The first {{ give_first }} answers are given.
                         {% if show_invalid and old_answer.evicted.invalid %} class="missing" {% endif %}>evicting</label>
                     <input type="text" id ="access_evict_{{ forloop.counter0 }}" name="access_evict_{{ forloop.counter0 }}" 
                         {% if old_answer.evicted != None %} value="{{ old_answer.evicted.string }}" {% endif %}
-                        {% if show_correct or is_given or old_answer.evicted == None %} disabled {% endif %}>
+                        {% if show_correct or is_given or old_answer.evicted.value == None %} disabled {% endif %}>
                 {% else %}
                     <!-- is miss -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss" name="access_hit_{{ forloop.counter0 }}" value="miss"
