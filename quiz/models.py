@@ -608,7 +608,7 @@ class CachePattern(models.Model):
     @staticmethod
     def generate_random(parameters,
             num_accesses=14,
-            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'conflict_miss'],
+            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'conflict_miss'],
             access_size=2,
             chance_setup_conflict_aggressive=3,
             chance_setup_conflict=2,
@@ -787,7 +787,7 @@ class PatternQuestion(models.Model):
     for_user = models.TextField()
     ask_evict = models.BooleanField(default=True)
     index = models.IntegerField()
-    give_first = models.IntegerField(default=5)
+    give_first = models.IntegerField(default=6)
    
     class Meta: 
         indexes = [
