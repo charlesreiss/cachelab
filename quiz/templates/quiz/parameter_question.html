@@ -15,6 +15,19 @@ Some of your answers were missing or misformatted. They are shown with <span cla
 </p>
 {% endif %}
 
+{% if num_perfect > 0 and num_perfect < needed_perfect %}
+<p>
+You have gotten {{num_perfect}} of {{needed_perfect}} cache parameter questions completely correct, so
+you have {{remaining_perfect}} more to complete. 
+</p>
+{% elif num_perfect > needed_perfect %}
+<p>
+You have more than {{needed_perfect}} cache parameter questions completely correct, so you have
+completed this part of the lab. You can still work on additional questions <em>for practice only</em>
+if you like.
+</p>
+{% endif %}
+
 {% if show_correct %} <form>{% csrf_token %}
 <p>
 You got a score of {{answer.score}} out of {{answer.max_score}} on this question at {{answer.submit_time}}.
