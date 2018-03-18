@@ -33,18 +33,20 @@ class PatternQuestionTest(TestCase):
                             block_size=1<<offset_bits,
                             address_bits=address_bits,
                         )
-                        for trial in range(5):
-                            with self.subTest(offset_bits=offset_bits, index_bits=index_bits, ways=ways, trial=trial, address_bits=address_bits):
+                        for trial in range(6):
+                            is_huge = trial > 5
+                            with self.subTest(offset_bits=offset_bits, index_bits=index_bits, ways=ways, trial=trial, address_bits=address_bits, is_huge=is_huge):
                                 random.seed(trial)
                                 logger.info("starting a subtest")
                                 desired_actions = ['random_miss'] + (['setup_conflict_aggressive'] * (ways)) + ['conflict_miss'] + \
                                                     ['hit', 'random_miss', 'conflict_miss', 'hit', 'hit']
                                 question = PatternQuestion.generate_random(parameters, 'test',
-                                    num_accesses=len(desired_actions),
+                                    num_accesses=len(desired_actions) if not is_huge else 1000,
                                     start_actions=desired_actions
                                     )
                                 accesses = question.pattern.accesses
                                 results = question.pattern.access_results
+                                self.assertEqual(len(results), len(desired_actions) if not is_huge else 1000)
                                 for expect_type, result, access in zip(desired_actions, results, accesses):
                                     self.assertEqual(expect_type, access.kind)
                                     if 'miss' in expect_type:
@@ -53,6 +55,8 @@ class PatternQuestionTest(TestCase):
                                         self.assertTrue(result.hit.value)
                                     if expect_type == 'conflict_miss':
                                         self.assertTrue(result.evicted.value != None)
+
+
 
 def login_as(client, username):
     from django.contrib.auth.models import User

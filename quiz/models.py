@@ -639,7 +639,7 @@ class CachePattern(models.Model):
                     index = random.randrange(0, 1 << index_bits)
                     if index not in used_indices:
                         tag = random.randrange(0, 1 << tag_bits)
-                        return parameters.unsplit_address(tag, index)
+                        return parameters.unsplit_address(tag, index, 0)
                 for index in range(parameters.num_sets):
                     if index in used_indices:
                         continue
@@ -704,7 +704,7 @@ class CachePattern(models.Model):
                 access_kind = start_actions[i]
             else:
                 possible = ['random_miss']
-                possible_weights = [chance_normal_miss]
+                possible_weights = [chance_random_miss]
                 possible.append('miss_prefer_empty')
                 possible_weights.append(chance_miss_prefer_empty)
                 possible.append('miss_prefer_used')
