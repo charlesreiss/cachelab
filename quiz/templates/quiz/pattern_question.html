@@ -58,6 +58,12 @@ The first {{ give_first }} answers are given.
         <li>
             <!-- access location/size -->
             {{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.parameters.address_bits %}</code>: <br>
+            {% if show_correct %}
+            {% if old_answer.tag.correct and old_answer.index.correct and old.answer.offset.correct and
+                old_answer.hit.correct and old.answer.evicted.correct %}
+            (correct)
+            {% endif %}
+            {% endif %}
             <!-- tag --> 
             <label for="access_index_{{ forloop.counter0 }}"
                 {% if show_invalid and old_answer.tag.invalid %} class="missing" {% endif %}
@@ -68,8 +74,9 @@ The first {{ give_first }} answers are given.
                 {% if show_correct or is_given %} disabled {% endif %} size="{{tag_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.tag.correct %} correct{% else %} incorrect{% endif %};
-                 correct answer: <tt>{{ actual_answer.tag.string }}</tt>)
+                {% if not old_answer.tag.correct %}
+                <span class="correction">(incorrect; correct tag: <tt>{{ actual_answer.tag.string }}</tt>)</span>
+                {% endif %}
             {% endif %}
             <!-- index -->
             <label for="access_index_{{ forloop.counter0 }}"
@@ -81,8 +88,9 @@ The first {{ give_first }} answers are given.
                    {% if show_correct or is_given %} disabled {% endif %} size="{{index_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.index.correct %} correct{% else %} incorrect;
-                <span class="corrected">correct answer: <tt>{{ actual_answer.index.string }}</tt></span> {%endif %})
+                {% if not old_answer.index.correct %}
+                <span class="correction">(incorrect; correct index: <tt>{{ actual_answer.index.string }}</tt>)</span>
+                {% endif %}
             {% endif %}
             <!-- offset -->
             <label for="access_offset_{{ forloop.counter0 }}"
@@ -93,8 +101,9 @@ The first {{ give_first }} answers are given.
                 {% if show_correct or is_given %} disabled {% endif %} size="{{offset_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.offset.correct %} correct{% else %} incorrect;
-                <span class="corrected">correct answer: <tt>{{ actual_answer.offset.string }}</tt></span>{%endif %})
+                {% if not old_answer.offset.correct %}
+                <span class="correction">(incorrect; correct offset: <tt>{{ actual_answer.offset.string }}</tt>)</span>
+                {% endif %}
             {% endif %}
             <!-- hit/miss -->
             <fieldset {% if show_invalid and old_answer.hit.invalid and not is_given %}class="missing"{% endif %}>
@@ -144,17 +153,16 @@ The first {{ give_first }} answers are given.
                         ><label for="access_hit_{{ forloop.counter0 }}_ismiss">miss</label>
                     </input>
                 {% endif %}
-                {% if show_correct %}
-                    (was{% if old_answer.hit.correct %} correct{% else %} incorrect;
-                    <span class="corrected">correct answer:
+                {% if show_correct and old_answer.hit.correct and old_answer.evicted.correct %}
+                <span class="correction">(incorrect; correct answer
                      {% if actual_answer.hit.value %}
                         hit
                      {% elif actual_answer.evicted.value != None %}
-                        miss evicting {{ actual_answer.evicted.string }}
+                         miss evicting <tt>{{ actual_answer.evicted.string }}</tt>
                      {% else %}
                         miss evicting nothing
-                        {% endif %}</span>
-                    {% endif %})
+                    {% endif %}
+                )</span>
                 {% endif %}
             {% if ask_evict %}
                 <!-- reset hit/miss -->
