@@ -610,14 +610,14 @@ class CachePattern(models.Model):
     @staticmethod
     def generate_random(parameters,
             num_accesses=14,
-            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'setup_conflict_aggressive',],
+            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'random_miss'],
             access_size=2,
-            chance_setup_conflict_aggressive=1,
+            chance_setup_conflict_aggressive=0,
             chance_setup_conflict=1,
             chance_conflict_miss=1,
-            chance_hit=3,
+            chance_hit=1,
             chance_random_miss=0.5,
-            chance_miss_prefer_empty=1,
+            chance_miss_prefer_empty=0,
             chance_miss_prefer_used=0.5):
         MAX_TRIES = 20
         MAX_RANDOM_LIST = 1000

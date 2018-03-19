@@ -70,9 +70,9 @@ def index_page(request):
 def random_parameters_for_pattern():
     return CacheParameters.random(
         min_ways=2, max_ways=3,
-        min_sets_log=3, max_sets_log=5,
-        min_block_size_log=1, max_block_size_log=3,
-        min_address_bits=16, max_address_bits=16,
+        min_sets_log=3, max_sets_log=6,
+        min_block_size_log=2, max_block_size_log=3,
+        min_address_bits=12, max_address_bits=12,
     )
 
 
@@ -196,7 +196,7 @@ def pattern_answer(request, question_id):
         answer.was_save = True
         answer.was_complete = False
     answer.save()
-    if answer.was_complete or answer.was_save:
+    if answer.was_save:
         return redirect('user-index')
     elif PatternQuestion.last_for_user(request.user.get_username()) == question:
         return redirect('last-pattern-question')
