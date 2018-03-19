@@ -129,7 +129,8 @@ def pattern_question_detail(request, question_id):
         'evicted_width': address_width,
         'ask_evict': question.ask_evict,
         'give_first': question.give_first,
-        'debug_enable': False,
+        'staff': request.session.get('is_staff', False),
+        'debug_enable': request.session.get('is_staff', False) and request.GET.get('debug', 'false') == 'true',
         'user': request.user.get_username(),
     }
     return HttpResponse(render(request, 'quiz/pattern_question.html', context))
