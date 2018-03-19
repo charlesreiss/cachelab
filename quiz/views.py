@@ -163,14 +163,15 @@ def pattern_answer(request, question_id):
         hit_key = 'access_hit_{}'.format(i)
         if hit_key in request.POST:
             hit_value = request.POST[hit_key]
+            if hit_value == 'hit':
+                cur_access.set_bool('hit', True)
+            elif hit_value != None and hit_value.startswith('miss'):
+                cur_access.set_bool('hit', False)
+            else:
+                cur_access.set_bool('hit', None)
         else:
+            hit_value = None
             cur_access.set_invalid('hit')
-        if hit_value == 'hit':
-            cur_access.set_bool('hit', True)
-        elif hit_value != None and hit_value.startswith('miss'):
-            cur_access.set_bool('hit', False)
-        else:
-            cur_access.set_bool('hit', None)
         for which in ['tag', 'index', 'offset']:
             key = 'access_{}_{}'.format(which, i)
             if key in request.POST:
