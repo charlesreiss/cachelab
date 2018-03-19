@@ -60,6 +60,7 @@ def index_page(request):
         'pattern_perfect': pattern_score != None and pattern_score == pattern_max_score,
 
         'staff': request.session.get('is_staff', False),
+        'course_website': settings.COURSE_WEBSITE
     }
     for i, answer in enumerate(best_parameter_answers):
         context['parameter_score{}'.format(i+1)] = answer.score

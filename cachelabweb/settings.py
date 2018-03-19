@@ -149,3 +149,4 @@ CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = 'DENY'
 
 LOGIN_URL = 'https://archimedes.cs.virginia.edu/cs3330/cachelab.php'
+COURSE_WEBSITE = 'https://www.cs.virginia.edu/~cr4bd/3330/S2018/'

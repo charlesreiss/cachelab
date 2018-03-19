@@ -57,3 +57,12 @@ def forwarded_login(request):
         return redirect('/')
     else:
         return HttpReponse(status=401)
+
+@require_http_methods(["POST"])
+def logout(request):
+    if 'allowed_logins' in request.session:
+        del request.session['allowed_logins']
+    if 'is_staff' in request.session:
+        del request.session['is_staff']
+    logout(request)
+    return redirect(settings.COURSE_WEBSITE)

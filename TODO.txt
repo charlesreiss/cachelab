@@ -1,5 +1,5 @@
 Necessary features:
-    - login support
+    X logout support
 
 Things to add:
     X submit time timezones
