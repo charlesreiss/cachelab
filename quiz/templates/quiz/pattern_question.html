@@ -68,7 +68,7 @@ The first {{ give_first }} answers are given.
                 {% if show_correct or is_given %} disabled {% endif %} size="{{tag_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.index.correct %} correct{% else %} incorrect{% endif %};
+                (was{% if old_answer.tag.correct %} correct{% else %} incorrect{% endif %};
                  correct answer: <tt>{{ actual_answer.tag.string }}</tt>)
             {% endif %}
             <!-- index -->
@@ -81,8 +81,8 @@ The first {{ give_first }} answers are given.
                    {% if show_correct or is_given %} disabled {% endif %} size="{{index_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.index.correct %} correct{% else %} incorrect{% endif %};
-                 correct answer: <tt>{{ actual_answer.index.string }}</tt>)
+                (was{% if old_answer.index.correct %} correct{% else %} incorrect;
+                <span class="corrected">correct answer: <tt>{{ actual_answer.index.string }}</tt></span> {%endif %})
             {% endif %}
             <!-- offset -->
             <label for="access_offset_{{ forloop.counter0 }}"
@@ -93,8 +93,8 @@ The first {{ give_first }} answers are given.
                 {% if show_correct or is_given %} disabled {% endif %} size="{{offset_width}}"
             >
             {% if show_correct %}
-                (was{% if old_answer.offset.correct %} correct{% else %} incorrect{% endif %};
-                 correct answer: <tt>{{ actual_answer.offset.string }}</tt>)
+                (was{% if old_answer.offset.correct %} correct{% else %} incorrect;
+                <span class="corrected">correct answer: <tt>{{ actual_answer.offset.string }}</tt></span>{%endif %})
             {% endif %}
             <!-- hit/miss -->
             <fieldset {% if show_invalid and old_answer.hit.invalid and not is_given %}class="missing"{% endif %}>
@@ -145,14 +145,15 @@ The first {{ give_first }} answers are given.
                     </input>
                 {% endif %}
                 {% if show_correct %}
-                    (was{% if old_answer.hit.correct %} correct{% else %} incorrect{% endif %};
-                     correct answer:
+                    (was{% if old_answer.hit.correct %} correct{% else %} incorrect;
+                    <span class="corrected">correct answer:
                      {% if actual_answer.hit.value %}
                         hit
                      {% elif actual_answer.evicted.value != None %}
                         miss evicting {{ actual_answer.evicted.string }}
                      {% else %}
                         miss evicting nothing
+                        {% endif %}</span>
                     {% endif %})
                 {% endif %}
             {% if ask_evict %}
