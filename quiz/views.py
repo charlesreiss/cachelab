@@ -40,7 +40,7 @@ def index_page(request):
         last_pattern_in_progress = True
     num_pattern_answer = PatternAnswer.num_complete_for_user(user)
     if num_pattern_answer > 0:
-        best_pattern_answer = PatternAnswer.best_complete_for_user()
+        best_pattern_answer = PatternAnswer.best_complete_for_user(user)
         pattern_score = best_pattern_answer.score
         pattern_max_score = best_pattern_answer.max_score
     else:
