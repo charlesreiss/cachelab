@@ -937,7 +937,7 @@ class PatternAnswer(models.Model):
 
     @staticmethod
     def best_complete_for_user(user):
-        return PatternAnswer.objects.filter(for_user__exact=user,was_complete=True).order_by('-score').first()
+        return PatternAnswer.objects.filter(for_user__exact=user,was_complete=True).order_by(-(Q('max_score') - Q('score'))).first()
 
     @staticmethod
     def num_complete_for_user(user):
