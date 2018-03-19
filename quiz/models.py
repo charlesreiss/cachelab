@@ -615,7 +615,7 @@ class CachePattern(models.Model):
             chance_setup_conflict_aggressive=0,
             chance_setup_conflict=0.5,
             chance_conflict_miss=0.5,
-            chance_hit=2,
+            chance_hit=1.5,
             chance_random_miss=1,
             chance_miss_prefer_empty=0,
             chance_miss_prefer_used=0.5):
