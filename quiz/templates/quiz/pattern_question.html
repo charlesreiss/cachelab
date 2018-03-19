@@ -192,7 +192,7 @@ The first {{ give_first }} answers are given.
 <h2>Expected result</h2>
 <ul>
 {% for result in question.pattern.access_results %}
-    <li>result should be {{ result.tag.string }} {{ result.index.string }} {{ result.offset.string }} {% if result.hit %}hit{% else %}miss{% endif %} (evicts {{ result.evicted.string }}</li>
+    <li>result should be {{ result.tag.string }} {{ result.index.string }} {{ result.offset.string }} {% if result.hit.value %}hit{% else %}miss{% endif %} (evicts {{ result.evicted.string }}</li>
 {% endfor %}
 {% endif %}
 </ul>
