@@ -14,7 +14,7 @@ You are logged in as <strong>{{user}}</strong>.
 
 {% if show_correct %}
 <p>
-Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points.<br />
+Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points. {% if answer.score != answer.max_score %}Incorrect answers are shown with <span class="correction">red</span> corrections below.{% endif %}<br />
 If you'd like to try again, you can <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button></form>
 </p>
 {% else %}
@@ -152,7 +152,8 @@ The first {{ give_first }} answers are given.
                         ><label for="access_hit_{{ forloop.counter0 }}_ismiss">miss</label>
                     </input>
                 {% endif %}
-                {% if show_correct and not (old_answer.hit.correct and old_answer.evicted.correct) %}
+                {% if not old_answer.hit.correct or not old_answer.evicted.correct %}
+                {% if show_correct %}
                 <span class="correction">(incorrect; correct answer
                      {% if actual_answer.hit.value %}
                         hit
@@ -162,6 +163,7 @@ The first {{ give_first }} answers are given.
                         miss evicting nothing
                     {% endif %}
                 )</span>
+                {% endif %}
                 {% endif %}
             {% if ask_evict %}
                 <!-- reset hit/miss -->
