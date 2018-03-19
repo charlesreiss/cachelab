@@ -73,6 +73,7 @@ def random_parameters_for_pattern():
         min_sets_log=3, max_sets_log=6,
         min_block_size_log=2, max_block_size_log=3,
         min_address_bits=12, max_address_bits=12,
+        address_bits_rounding=4,
     )
 
 
