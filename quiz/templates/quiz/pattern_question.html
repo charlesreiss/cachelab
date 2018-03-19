@@ -152,7 +152,7 @@ The first {{ give_first }} answers are given.
                         ><label for="access_hit_{{ forloop.counter0 }}_ismiss">miss</label>
                     </input>
                 {% endif %}
-                {% if show_correct and old_answer.hit.correct and old_answer.evicted.correct %}
+                {% if show_correct and not (old_answer.hit.correct and old_answer.evicted.correct) %}
                 <span class="correction">(incorrect; correct answer
                      {% if actual_answer.hit.value %}
                         hit
