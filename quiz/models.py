@@ -247,9 +247,9 @@ class CacheParameters(models.Model):
 
     @staticmethod
     def random(
-            min_ways=1, max_ways=32, min_sets_log=0,
+            min_ways=1, max_ways=12, min_sets_log=0,
             max_sets_log=24, min_block_size_log=0,
-            max_block_size_log=10,
+            max_block_size_log=8,
             min_address_bits=8,
             max_address_bits=64,
             address_bits_rounding=8,
