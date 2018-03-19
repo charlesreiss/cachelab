@@ -103,7 +103,7 @@ The first {{ give_first }} answers are given.
                     {% if not old_answer.hit.invalid and old_answer.hit.value == True %} checked {% endif %}
                     {% if show_correct or is_given %} disabled {% endif %}
                     {% if ask_evict %}
-                        onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                        onchange="document.getElementById('access_evicted_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
                     {% endif %}
                 ><label for="access_hit_{{ forloop.counter0 }}_ishit">hit</label>
                 {% if ask_evict %}
@@ -116,7 +116,7 @@ The first {{ give_first }} answers are given.
                         {% if show_correct or is_given %}
                             disabled
                         {% endif %}
-                        onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                        onchange="document.getElementById('access_evicted_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
                     ><label for="access_hit_{{ forloop.counter0 }}_ismiss_noevict">miss (not evicting anything)</label>
                     <!-- is miss/evict -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_evict"
@@ -127,7 +127,7 @@ The first {{ give_first }} answers are given.
                         {% if show_correct or is_given %}
                             disabled
                         {% endif %}
-                        onchange="document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                        onchange="document.getElementById('access_evicted_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
                     ><label for="access_hit_{{ forloop.counter0 }}_ismiss_evict">miss, </label>
                     <!-- miss/evict address -->
                     <label for="access_evicted_{{ forloop.counter0 }}"
@@ -157,7 +157,7 @@ The first {{ give_first }} answers are given.
                 {% endif %}
             {% if ask_evict %}
                 <!-- reset hit/miss -->
-                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_noevict').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked = false;  document.getElementById('access_evict_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
+                <button type="button" onclick="document.getElementById('access_hit_{{ forloop.counter0 }}_ishit').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_noevict').checked = false; document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked = false;  document.getElementById('access_evicted_{{ forloop.counter0 }}').disabled = !document.getElementById('access_hit_{{ forloop.counter0 }}_ismiss_evict').checked;"
                     {% if show_correct or is_given %} disabled {% endif %}
                     >reset hit/miss</button>
             {% else %}
