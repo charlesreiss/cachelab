@@ -296,6 +296,8 @@ def _can_find_parameters_from(given_parts):
         set(['block_size', 'set_size_bytes', 'num_ways']),
         set(['block_size', 'num_ways', 'num_sets', 'cache_size_bytes']),
         set(['tag_bits', 'index_bits', 'offset_bits', 'address_bits']),
+        set(['cache_size_bytes', 'set_size_bytes', 'num_sets']),
+        set(['cache_size_bytes', 'way_size_bytes', 'num_ways']),
     ]
     while not done:
         done = True
