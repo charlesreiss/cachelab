@@ -12,11 +12,17 @@
 You are logged in as <strong>{{user}}</strong>.
 </p>
 
-{% if show_correct %}
+{% if show_correct %}<form>{% csrf_token %}
 <p>
 Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points. {% if answer.score != answer.max_score %}Incorrect answers are shown with <span class="correction">red</span> corrections below.{% endif %}<br />
-If you'd like to try again, you can <form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button></form>
+{% if answer.score != answer.max_score %}
+If you'd like to try again, you can
+{% else %}
+You've <em>completed</em> this part of the lab. But if you want more practice, you can 
+{% endif %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button>
 </p>
+</form>
+{% endif %}
 {% else %}
 {% endif %}
 
@@ -192,7 +198,7 @@ The first {{ give_first }} answers are given.
 <h2>Expected result</h2>
 <ul>
 {% for result in question.pattern.access_results %}
-    <li>result should be {{ result.tag.string }} {{ result.index.string }} {{ result.offset.string }} {% if result.hit.value %}hit{% else %}miss{% endif %} (evicts {{ result.evicted.string }}</li>
+    <li>result should be {{ result.tag.string }} {{ result.index.string }} {{ result.offset.string }} {% if result.hit.value %}hit{% else %}miss{% endif %} (evicts {{ result.evicted.string }})</li>
 {% endfor %}
 {% endif %}
 </ul>
