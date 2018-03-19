@@ -185,6 +185,8 @@ class PatternSubmitTest(TestCase):
         self.assertFalse(last_answer.was_save)
         self.assertEqual(last_answer.score, 6 * 5)
         self.assertEqual(last_answer.max_score, 6 * 5)
+        best_complete = PatternAnswer.best_complete_for_user('test')
+        self.assertEqual(best_complete, last_answer)
 
 
 
