@@ -84,6 +84,7 @@ You can also review your <a href="{% url 'last-pattern-question' %}">last answer
     (This actually reassigns them to the user <tt>{{user}}+hidden</tt>.)</li>
 <li><form>{% csrf_token %}<button formmethod="POST" formaction="{% url 'unforget-questions' %}">unforget my old answers/questions</button></form>
     (This reassigns all questions from the user <tt>{{user}}+hidden</tt> to <tt>{{user}}</tt>.)</li>
+<li><form method="GET" action="{% url 'scores-csv' %}"><input type="submit" value="retrieve scores"> for due date <input type="text" name="due" value="2018-03-29T01:00-0400"></form></li>
 </ul>
 {% endif %}
 {% endblock %}

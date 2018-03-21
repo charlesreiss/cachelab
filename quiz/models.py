@@ -455,6 +455,10 @@ class ParameterAnswer(models.Model):
     @staticmethod
     def best_K_for_user(user, K):
         return ParameterAnswer.objects.filter(for_user__exact=user, was_complete=True).order_by('-score_ratio', '-submit_time')[:K]
+    
+    @staticmethod
+    def best_K_for_user_by_time(user, K, time):
+        return ParameterAnswer.objects.filter(for_user__exact=user, was_complete=True, submit_time__lte=time).order_by('-score_ratio', '-submit_time')[:K]
 
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
@@ -942,6 +946,11 @@ class PatternAnswer(models.Model):
                     F('max_score') - F('score')
                 ).first()
 
+    @staticmethod
+    def best_complete_for_user_by_time(user, submit_time):
+        return PatternAnswer.objects.filter(for_user__exact=user,was_complete=True, submit_time__lte=submit_time).order_by(
+                    F('max_score') - F('score')
+                ).first()
     @staticmethod
     def num_complete_for_user(user):
         return PatternAnswer.objects.filter(for_user__exact=user,was_complete=True).count()

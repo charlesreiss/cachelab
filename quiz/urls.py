@@ -20,5 +20,6 @@ urlpatterns = [
     path('forget-questions', views.forget_questions, name='forget-questions'),
     path('unforget-questions', views.unforget_questions, name='unforget-questions'),
 
+    path('scores.csv', views.get_scores_csv, name='scores-csv'),
 ]
 

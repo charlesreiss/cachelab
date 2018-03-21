@@ -26,9 +26,10 @@ from .secret_settings import *
 #DEBUG = True
 DEBUG = os.getenv('DJANGO_DEBUG_ON', 'false') == 'true'
 
-ALLOWED_HOSTS = [
-    'archimedes.cs.virginia.edu'
-]
+if not DEBUG:
+    ALLOWED_HOSTS = [
+        'archimedes.cs.virginia.edu'
+    ]
 
 
 # Application definition
@@ -144,8 +145,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = 'DENY'
 
 LOGIN_URL = 'https://archimedes.cs.virginia.edu/cs3330/cachelab.php'

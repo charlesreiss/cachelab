@@ -1,3 +1,5 @@
+import csv
+import datetime
 import itertools
 import json
 import logging
@@ -5,6 +7,7 @@ import logging
 from django import template
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -371,4 +374,35 @@ def unforget_questions(request):
         ParameterQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
         return HttpResponse('questions unforgotten')
 
-
+@login_required
+def get_scores_csv(request):
+    if request.session.get('is_staff', False) == False:
+        return HttpResponse('This feature is for staff only.')
+    else:
+        due_datetime = datetime.datetime.strptime(request.GET.get('due'), '%Y-%m-%dT%H:%M%z')
+        response = HttpResponse(content_type='text/csv')
+        writer = csv.writer(response)
+        writer.writerow(['compid', 'parameter scores', 'pattern score', 'lab score [10]'])
+        for user in map(lambda x: x.get_username(), User.objects.all()):
+            parameter_answers = ParameterAnswer.best_K_for_user_by_time(user, NEEDED_PARAMETER_PERFECT, due_datetime)
+            pattern_answer = PatternAnswer.best_complete_for_user_by_time(user, due_datetime)
+            param_complete = False
+            param_scores = []
+            total_param_score = 0.0
+            for answer in parameter_answers:
+                param_scores.append('{}/{}'.format(answer.score, answer.max_score))
+                total_param_score += float(answer.score) / float(answer.max_score)
+            pattern_score = '(none)'
+            total_pattern_score = 0.0
+            if pattern_answer != None:
+                pattern_score = '{}/{}'.format(pattern_answer.score, pattern_answer.max_score)
+                total_pattern_score += float(pattern_answer.score) / float(pattern_answer.max_score)
+            score = (
+                        total_param_score / NEEDED_PARAMETER_PERFECT +
+                        total_pattern_score
+                    ) / 2.0 * 10.0
+            if total_param_score > 2:
+                score = max(5.0, score)
+            score = '{:.1f}'.format(score)
+            writer.writerow([user, ' and '.join(param_scores), pattern_score, score])
+        return response

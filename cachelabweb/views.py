@@ -38,6 +38,7 @@ def forwarded_login_setup(request):
         return HttpResponse(status=401)
 
 def forwarded_login_prompt(request, username):
+    logger.debug('session is %s', request.session.items())
     if request.user.get_username() == username:
         return redirect('/')
     elif username in request.session['allowed_logins']:
