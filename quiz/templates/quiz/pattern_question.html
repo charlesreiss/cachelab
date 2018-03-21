@@ -23,14 +23,20 @@ by getting a perfect score once. But you still need to <strong><a href="{% url '
     </a></strong>.
 {% endif %}
 </p>
-<p class="again">
 {% if show_correct and answer.score != answer.max_score %}
+<p class="again">
 The problem below is one you attempted after completing the lab and did
 not count for credit.
-{% elif not show_correct %}
-But you may attempt the additional problem below <em>for practice only</em>.
-{% endif %}
 </p>
+{% elif not show_correct %}
+<p class="again">
+Since you have completed the lab, you may attempt the additional problem below <em>for practice only</em>.
+</p>
+{% else %}
+<p class="again">
+You have completed the lab, but you may still request additional problems <em>for practice only</em>.
+</p>
+{% endif %}
 {% endif %}
 
 {% if show_correct %}<form>{% csrf_token %}
