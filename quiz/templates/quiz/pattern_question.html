@@ -1,13 +1,13 @@
 {% extends "quiz/base_generic.html" %}
 
 
-{% block title %}{% if show_correct %}CacheLab: access pattern quiz (results){% else %}CacheLab: access pattern quiz{% endif %}{% endblock %}
+{% block title %}{% if show_correct %}CacheLab: access pattern question (results){% else %}CacheLab: access pattern question{% endif %}{% endblock %}
 
 {% load quiz_extras %}
 
 {% block content %}
 <p><a href="{% url 'user-index' %}">return to lab index page</a></p>
-<h1>CacheLab: access pattern quiz</h1>
+<h1>CacheLab: access pattern question</h1>
 <p>
 You are logged in as <strong>{{user}}</strong>.
 </p>
@@ -18,7 +18,8 @@ Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.scor
 {% if answer.score != answer.max_score %}
 If you'd like to try again, you can
 {% else %}
-You've <em>completed</em> this part of the lab. But if you want more practice, you can 
+<span class="done">Congratulations!</pan> You've <em>completed</em> this part of the lab.</p>
+<p class="again">But if you want more practice, you can still
 {% endif %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button>
 </p>
 </form>
@@ -43,8 +44,8 @@ Consider a cache with the following parameters:
 <li>an LRU replacement policy</li>
 </ul>
 <p>
-Assuming the cache is <strong>initially empty</strong>. 
-Then memory is accessed shown below. For each access, indicate how it is split into tag/index/offset, and whether it is a
+Assume the cache is <strong>initially empty</strong>. 
+Then memory is accessed as shown below. For each access, indicate how it is split into tag/index/offset, and whether it is a
 hit or miss. Write all address parts in <strong>hexadecimal</strong>.
 </p>
 <p>
