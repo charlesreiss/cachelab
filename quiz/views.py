@@ -135,8 +135,8 @@ def pattern_question_detail(request, question_id):
             old_answers[i] = question.pattern.access_results[i]
         accesses_with_default = zip(question.pattern.accesses, old_answers, question.pattern.access_results, is_given)
     accesses_with_default = list(accesses_with_default)
-    widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4)
-    address_width = int((question.address_bits + 3) / 4)
+    widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4) + 3
+    address_width = int((question.address_bits + 3) / 4) + 3
     context = {
         'question': question,
         'answer': answer,
