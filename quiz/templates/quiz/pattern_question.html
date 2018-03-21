@@ -22,13 +22,11 @@ not count for credit.
 But you may attempt the additional problem below <em>for practice only</em>.
 {% endif %}
 </p>
-</p>
 {% endif %}
 
 {% if show_correct %}<form>{% csrf_token %}
 <p>
 Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points. {% if answer.score != answer.max_score %}Incorrect answers are shown with <span class="correction">red</span> corrections below.{% endif %}<br />
-{% if answer.score != answer.max_score %}
 If you'd like to try again, you can
 button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button>
 </p>
