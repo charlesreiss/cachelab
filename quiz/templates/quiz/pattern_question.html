@@ -11,19 +11,28 @@
 <p>
 You are logged in as <strong>{{user}}</strong>.
 </p>
+{% if pattern_perfect %}
+<p>
+<span class="done">Congratulations!</span> You've <em>completed</em> this part of the lab
+by getting a perfect score once.
+{% if show_correct and answer.score != answer.max_score %}
+The problem below is one you attempted after completing the lab and did
+not count for credit.
+{% elif not show_correct %}
+But you may attempt the additional problem below <em>for practice only</em>.
+{% endif %}
+</p>
+</p>
+{% endif %}
 
 {% if show_correct %}<form>{% csrf_token %}
 <p>
 Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points. {% if answer.score != answer.max_score %}Incorrect answers are shown with <span class="correction">red</span> corrections below.{% endif %}<br />
 {% if answer.score != answer.max_score %}
 If you'd like to try again, you can
-{% else %}
-<span class="done">Congratulations!</pan> You've <em>completed</em> this part of the lab.</p>
-<p class="again">But if you want more practice, you can still
-{% endif %}<button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button>
+button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button>
 </p>
 </form>
-{% else %}
 {% endif %}
 
 {% if show_invalid %}

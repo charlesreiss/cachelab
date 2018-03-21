@@ -120,6 +120,8 @@ def pattern_question_detail(request, question_id):
     accesses_with_default = list(accesses_with_default)
     widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4)
     address_width = int((question.address_bits + 3) / 4)
+    best_pattern_answer = PatternAnswer.best_complete_for_user(user)
+    pattern_perfect = best_pattern_answer.score == best_pattern_answer.max_score
     context = {
         'question': question,
         'answer': answer,
@@ -135,6 +137,7 @@ def pattern_question_detail(request, question_id):
         'staff': request.session.get('is_staff', False),
         'debug_enable': request.session.get('is_staff', False) and request.GET.get('debug', 'false') == 'true',
         'user': request.user.get_username(),
+        'pattern_perfect': pattern_perfect,
     }
     return HttpResponse(render(request, 'quiz/pattern_question.html', context))
 
