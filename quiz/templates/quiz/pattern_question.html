@@ -13,8 +13,15 @@ You are logged in as <strong>{{user}}</strong>.
 </p>
 {% if pattern_perfect %}
 <p>
-<span class="done">Congratulations!</span> You've <em>completed</em> this part of the lab
-by getting a perfect score once.
+<span class="done">Congratulations!</span>
+{% if parameter_perfect %}
+You've <em>completed</em> the lab.
+{% else %}
+You've completed <em>this part</em> of the lab
+by getting a perfect score once. But you still need to <strong><a href="{% url 'last-parameter-question' %}">complete
+    some more cache parameter questions
+    </a></strong>.
+{% endif %}
 {% if show_correct and answer.score != answer.max_score %}
 The problem below is one you attempted after completing the lab and did
 not count for credit.

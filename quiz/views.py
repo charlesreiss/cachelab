@@ -20,6 +20,23 @@ logger = logging.getLogger('cachelabweb')
 
 NEEDED_PARAMETER_PERFECT = 3
 
+def pattern_perfect(request):
+    user = request.user.get_username()
+    best_pattern_answer = PatternAnswer.best_complete_for_user(request.user.get_username())
+    if best_pattern_answer != None:
+        return best_pattern_answer.score == best_pattern_answer.max_score
+    else:
+        return False
+
+def parameter_perfect(request):
+    user = request.user.get_username()
+    parameter_perfect_count = 0
+    best_parameter_answers = ParameterAnswer.best_K_for_user(user, NEEDED_PARAMETER_PERFECT)
+    for answer in best_parameter_answers:
+        if answer.score == answer.max_score:
+            parameter_perfect_count += 1
+    return parameter_perfect_count >= NEEDED_PARAMETER_PERFECT
+
 @login_required
 def index_page(request):
     user = request.user.get_username()
@@ -120,8 +137,6 @@ def pattern_question_detail(request, question_id):
     accesses_with_default = list(accesses_with_default)
     widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4)
     address_width = int((question.address_bits + 3) / 4)
-    best_pattern_answer = PatternAnswer.best_complete_for_user(request.user.get_username())
-    pattern_perfect = best_pattern_answer.score == best_pattern_answer.max_score
     context = {
         'question': question,
         'answer': answer,
@@ -137,7 +152,8 @@ def pattern_question_detail(request, question_id):
         'staff': request.session.get('is_staff', False),
         'debug_enable': request.session.get('is_staff', False) and request.GET.get('debug', 'false') == 'true',
         'user': request.user.get_username(),
-        'pattern_perfect': pattern_perfect,
+        'pattern_perfect': pattern_perfect(request),
+        'parameter_perfect': parameter_perfect(request),
     }
     return HttpResponse(render(request, 'quiz/pattern_question.html', context))
 
@@ -295,6 +311,8 @@ def parameter_question_detail(request, question_id):
         'perfect': parameter_perfect_count >= NEEDED_PARAMETER_PERFECT,
         'needed_perfect': NEEDED_PARAMETER_PERFECT,
         'remaining_perfect': NEEDED_PARAMETER_PERFECT - parameter_perfect_count,
+
+        'pattern_perfect': pattern_perfect(request),
     }
     return HttpResponse(render(request, 'quiz/parameter_question.html', context))
 

@@ -24,7 +24,12 @@ you have {{remaining_perfect}} more to complete.
 <p>
 <span class="done">Congratulations!</span>
 You have {{needed_perfect}} or more cache parameter questions completely correct, so you have
-completed this part of the lab. To finish the lab, go on to <a href="{% url 'last-pattern-question' %}">cache access pattern questions</a>.
+completed this part of the lab.
+{% if pattern_perfect %}
+Since you've also done the other part of the lab, you have finsihed this lab.
+{% else %}
+To finish the lab, go on to <strong><a href="{% url 'last-pattern-question' %}">cache access pattern questions</a></strong>.
+{% endif %}
 <p class="again">
 If you want to practice this type of question more, you can still answer additional
 cache parameter questions, but they won't count for lab credit.
