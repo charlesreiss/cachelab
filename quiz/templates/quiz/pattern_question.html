@@ -146,8 +146,10 @@ The first {{ give_first }} answers are given.
                     <!-- is miss/no evict -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_noevict"
                         name="access_hit_{{ forloop.counter0 }}" value="miss-noevict"
-                        {% if not old_answer.hit.invalid and old_answer.hit.value == False and old_answer.evicted.value == None %}
+                        {% if not old_answer.hit.invalid and old_answer.hit.value == False %}
+                        {% if old_answer.evicted.value == None and old_answer.evicted.invalid == False %}
                             checked
+                        {% endif %}
                         {% endif %}
                         {% if show_correct or is_given %}
                             disabled
@@ -157,8 +159,10 @@ The first {{ give_first }} answers are given.
                     <!-- is miss/evict -->
                     <input type="radio" id ="access_hit_{{ forloop.counter0 }}_ismiss_evict"
                         name="access_hit_{{ forloop.counter0 }}" value="miss-evict"
-                        {% if not old_answer.hit.invalid and old_answer.hit.value == False and old_answer.evicted.value != None %}
+                        {% if not old_answer.hit.invalid and old_answer.hit.value == False %} 
+                        {% if old_answer.evicted.value != None or old_answer.evicted.invalid == True %}
                             checked 
+                        {% endif %}
                         {% endif %}
                         {% if show_correct or is_given %}
                             disabled
