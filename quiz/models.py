@@ -274,6 +274,14 @@ class CacheParameters(models.Model):
         return CacheParameters.get(num_ways=num_ways, num_sets=num_sets, block_size=block_size, address_bits=address_bits)
 
 
+def random_parameters_for_pattern():
+    return CacheParameters.random(
+        min_ways=2, max_ways=3,
+        min_sets_log=3, max_sets_log=6,
+        min_block_size_log=2, max_block_size_log=3,
+        min_address_bits=12, max_address_bits=12,
+        address_bits_rounding=4,
+    )
 
 all_cache_question_parameters = [
     'tag_bits',
@@ -613,7 +621,7 @@ class CachePattern(models.Model):
     * setup_conflict_aggressive --- a cache miss to a most-full already accessed set
     """
     @staticmethod
-    def generate_random(parameters,
+    def random(parameters,
             num_accesses=13,
             start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'random_miss'],
             access_size=2,
