@@ -235,9 +235,9 @@ def _name_parameter(parameter):
     elif parameter.endswith('_bits'):
         return parameter[:-len('_bits')] + ' bits'
     elif parameter == 'way_size_bytes':
-        return 'total bytes per way'
+        return 'total data bytes in each way (across all sets)'
     elif parameter == 'set_size_bytes':
-        return 'total bytes per set'
+        return 'total data bytes per set'
     elif parameter.endswith('_bytes'):
         return parameter[:-len('_bytes')].replace('_', ' ') + ' (bytes)'
     elif parameter == 'block_size':
