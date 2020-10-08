@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import permission_required, login_required
 
-from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, ResultItem, all_cache_question_parameters
+from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, ResultItem, all_cache_question_parameters, random_parameters_for_pattern
 
 logger = logging.getLogger('cachelabweb')
 
@@ -89,21 +89,12 @@ def index_page(request):
         context['parameter_score{}_max'.format(i+1)] = answer.max_score
     return HttpResponse(render(request, 'quiz/user_index.html', context))
 
-def random_parameters_for_pattern():
-    return CacheParameters.random(
-        min_ways=2, max_ways=3,
-        min_sets_log=3, max_sets_log=6,
-        min_block_size_log=2, max_block_size_log=3,
-        min_address_bits=12, max_address_bits=12,
-        address_bits_rounding=4,
-    )
-
 
 @login_required
 def last_pattern_question(request):
     question = PatternQuestion.last_for_user(request.user.get_username())
     if not question:
-        PatternQuestion.generate_random(
+        PatternQuestion.random(
             parameters=random_parameters_for_pattern(), for_user=request.user.get_username()
         )
         question = PatternQuestion.last_for_user(request.user.get_username())
@@ -113,7 +104,7 @@ def last_pattern_question(request):
 @require_http_methods(["POST"])
 def new_pattern_question(request):
     parameters = random_parameters_for_pattern()
-    PatternQuestion.generate_random(parameters=parameters, for_user=request.user.get_username())
+    PatternQuestion.random(parameters=parameters, for_user=request.user.get_username())
     return redirect('last-pattern-question')
 
 # FIXME: @permission_required('quiz.delete_patternquestion')

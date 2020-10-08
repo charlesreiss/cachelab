@@ -17,7 +17,7 @@ class PatternQuestionTest(TestCase):
             block_size=1,
             address_bits=1,
         )
-        pattern = PatternQuestion.generate_random(parameters, 'test',
+        pattern = PatternQuestion.random(parameters, 'test',
             num_accesses=6,
             start_actions=['random_miss', 'random_miss', 'conflict_miss', 'hit', 'random_miss', 'conflict_miss'],
             )
@@ -40,7 +40,7 @@ class PatternQuestionTest(TestCase):
                                 logger.info("starting a subtest")
                                 desired_actions = ['random_miss'] + (['setup_conflict_aggressive'] * (ways)) + ['conflict_miss'] + \
                                                     ['hit', 'random_miss', 'conflict_miss', 'hit', 'hit']
-                                question = PatternQuestion.generate_random(parameters, 'test',
+                                question = PatternQuestion.random(parameters, 'test',
                                     num_accesses=len(desired_actions) if not is_huge else 1000,
                                     start_actions=desired_actions
                                     )

@@ -1,10 +1,14 @@
-if kill -0 `cat uwsgi.pid`; then
+cd /var/www/vibe.d/cachelab
+
+if /bin/kill -0 `cat uwsgi.pid`; then
+    true;
 else
     bash restart-uwsgi.sh
 fi
 
-if kill -0 `cat nginx-build/logs/nginx.pid`; then
+if /bin/kill -0 `cat nginx-build/logs/nginx.pid`; then
+    true;
 else
-    bash restart-uwsgi.sh
+    bash restart-nginx.sh
 fi
 
