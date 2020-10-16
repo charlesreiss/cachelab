@@ -830,7 +830,7 @@ class PatternQuestion(models.Model):
         return PatternQuestion.objects.filter(for_user__exact=for_user).order_by('-index').first()    
 
     @staticmethod
-    def random(parameters, for_user, **extra_args):
+    def generate_random(parameters, for_user, **extra_args):
         last_question = PatternQuestion.last_for_user(for_user)
         if last_question:
             index = last_question.index + 1
