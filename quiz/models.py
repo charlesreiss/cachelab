@@ -830,13 +830,13 @@ class PatternQuestion(models.Model):
         return PatternQuestion.objects.filter(for_user__exact=for_user).order_by('-index').first()    
 
     @staticmethod
-    def generate_random(parameters, for_user, **extra_args):
+    def random(parameters, for_user, **extra_args):
         last_question = PatternQuestion.last_for_user(for_user)
         if last_question:
             index = last_question.index + 1
         else:
             index = 0
-        pattern = CachePattern.generate_random(parameters, **extra_args)
+        pattern = CachePattern.random(parameters, **extra_args)
         result = PatternQuestion()
         result.pattern = pattern
         result.for_user = for_user
