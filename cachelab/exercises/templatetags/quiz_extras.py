@@ -3,7 +3,7 @@ import logging
 
 register = template.Library()
 
-logger = logging.getLogger('cachelabweb')
+logger = logging.getLogger('cachelab')
 
 @register.simple_tag()
 def format_hex(value, bits):

@@ -6,7 +6,7 @@ import random
 
 import logging
 
-logger = logging.getLogger('cachelabweb')
+logger = logging.getLogger('cachelab')
 
 # Create your tests here.
 class PatternQuestionTest(TestCase):

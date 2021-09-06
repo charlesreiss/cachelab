@@ -1,3 +1,4 @@
+<!-- template for forwarded logins -->
 <form action="{% url 'forwarded-login' %}" method="post">
 {% csrf_token %}
 <input type="hidden" name="username" value="{{ username }}">

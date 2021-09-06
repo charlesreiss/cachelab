@@ -15,6 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
@@ -23,5 +24,6 @@ urlpatterns = [
     path('login-prompt/<username>', views.forwarded_login_prompt, name='forwarded-login-prompt'),
     path('login', views.forwarded_login, name='forwarded-login'),
     path('logout', views.logout , name='logout'),
-    path('', include('quiz.urls')),
+    path('', include('cachelab.exercises.urls')),
+    path('builtin-login/', auth_views.LoginView.as_view(template_name='builtin_login.html'), name='builtin-login')
 ]

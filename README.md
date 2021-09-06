@@ -9,17 +9,29 @@ Two sets of questions are asked:
 
 The tool requires three sets of questions to be answered of the first type and one of the second type. Students can keep trying new questions until they get all questions correct.
 
+# Quick demo
+
+Run `./run-demo.sh migrate`, then `./run-demo.sh make_user username password`, then `./run-demo.sh`.
+Then go `http://localhost:8888/` and login with 
+
 # Setup
 
 This program is a Django web application. To use it, first:
 
 *  Figure out how you're handling authentication, see [the Authentication section below](#Authentication)
-*  Edit `cachelabweb/settings.py` to change `ALLOWED_HOSTS`, `LOGIN_URL`, and `COURSE_WEBSITE`.
+*  Edit `cachelabweb/settings.py` to change `ALLOWED_HOSTS` and `COURSE_WEBSITE` and (if you are using
+   external authentication as described below) `LOGIN_URL`
 *  Do any customization of the questions you desire.
 
-Then,you can run it as a standalone web application using `python manage.py 127.0.0.1:8888` (to bind to port 8888 on localhost). When not testing, I ran it using Nginx to act as an HTTPS server which acted as a reverse proxy to a uwsgi server as the backend. Configuration files used are in `config-templates`.
+Then,you can run it as a standalone web application using `python manage.py runserver 127.0.0.1:8888` (to bind to port 8888 on localhost). When not testing, I ran it using Nginx to act as an HTTPS server which acted as a reverse proxy to a uwsgi server as the backend. Configuration files used are in `config-templates`.
 
 # Authentication
+
+## manually created accounts
+
+`manage.py` has a `make_user` subcommand which can create users with a particular username and password.
+
+## via external authentication
 
 As this was used at the University of Virginia, this web application relies on logins being forwarded from another website for authentication (rather
 than tying directly with a single-sign on system). The scripts used in Spring 2018 at the University of Virginia are in the `config-templates` directory:
