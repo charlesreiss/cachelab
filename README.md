@@ -56,17 +56,22 @@ The web application uses built-in Django account support, so it should be fairly
 need to add:
 
 *  identifying logged in users as staff based on their account instead of based on extra data passed on login and stored in the session.
-*  removal of the forwarded login support from `cachelabweb/urls.py`
+*  removal of the forwarded login support from `cachelab/urls.py`
+
+# General code organizatoin
+
+Everything is in the `cachelab` module. The actual exercises and the index page for them are in
+the `cachelab.exercises` module. (Code outside it that is for logistics like handling login, etc.)
 
 # Modifying the questions
 
 Most of the code that generates the questions is in `quiz/models.py` (with the corresponding HTML generation and form processing code in
-`quiz/views.py`). To change how random access patterns are generated edit the default parameters of the `random` method of `CachePattern`,
+`cachelab/exercises/views.py`). To change how random access patterns are generated edit the default parameters of the `random` method of `CachePattern`,
 and the `random_parameters_for_pattern` function. To change how random cache parameters are selected for parameter
 fill-in-the-blank questions, change the default parameters of the `random` method of `CacheParameters`.
 
 To change the number of cache parametetr questions required before the tool indicates the user is done, change `NEEDED_PARAMETER_PERFECT` in
-`quiz/views.py`.
+`cachelab/exercises/views.py`.
 
 # Retrieving grades
 
