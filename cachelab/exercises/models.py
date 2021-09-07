@@ -8,7 +8,7 @@ import math
 import random
 import uuid
 
-logger = logging.getLogger('cachelabweb')
+logger = logging.getLogger('cachelab')
 
 class CacheAccess():
     def __init__(self, address, size=1, kind=None, type='R'):
@@ -335,7 +335,7 @@ def _get_cache_givens_to_ask():
                 can_trim = True
         if not can_trim:
             filtered.add(givens)
-    logger.info('all_cache_given_sets = %s', filtered)
+    logger.debug('all_cache_given_sets = %s', filtered)
     return list(filtered)
 
 all_cache_given_sets = _get_cache_givens_to_ask()

@@ -12,7 +12,7 @@ import hmac
 import logging
 import time
 
-logger = logging.getLogger('cachelabweb')
+logger = logging.getLogger('cachelab')
 
 @require_http_methods(["POST"])
 @csrf_exempt

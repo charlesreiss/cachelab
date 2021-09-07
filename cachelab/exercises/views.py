@@ -87,7 +87,7 @@ def index_page(request):
     for i, answer in enumerate(best_parameter_answers):
         context['parameter_score{}'.format(i+1)] = answer.score
         context['parameter_score{}_max'.format(i+1)] = answer.max_score
-    return HttpResponse(render(request, 'quiz/user_index.html', context))
+    return HttpResponse(render(request, 'exercises/user_index.html', context))
 
 
 @login_required
@@ -109,7 +109,7 @@ def new_pattern_question(request):
 
 # FIXME: @permission_required('quiz.delete_patternquestion')
 def test_control(request):
-    return HttpResponse(render(request, 'quiz/test_control.html', {}))
+    return HttpResponse(render(request, 'exercises/test_control.html', {}))
 
 def pattern_question_detail(request, question_id):
     question = PatternQuestion.objects.get(question_id=question_id)
@@ -146,7 +146,7 @@ def pattern_question_detail(request, question_id):
         'pattern_perfect': pattern_perfect(request),
         'parameter_perfect': parameter_perfect(request),
     }
-    return HttpResponse(render(request, 'quiz/pattern_question.html', context))
+    return HttpResponse(render(request, 'exercises/pattern_question.html', context))
 
 def value_from_hex(x):
     if x != None and (x.startswith('0x') or x.startswith('0X')):
@@ -305,7 +305,7 @@ def parameter_question_detail(request, question_id):
 
         'pattern_perfect': pattern_perfect(request),
     }
-    return HttpResponse(render(request, 'quiz/parameter_question.html', context))
+    return HttpResponse(render(request, 'exercises/parameter_question.html', context))
 
 @login_required
 @require_http_methods(["POST"])

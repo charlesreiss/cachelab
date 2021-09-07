@@ -9,17 +9,29 @@ Two sets of questions are asked:
 
 The tool requires three sets of questions to be answered of the first type and one of the second type. Students can keep trying new questions until they get all questions correct.
 
+# Quick demo
+
+Run `./run-demo.sh migrate`, then `./run-demo.sh make_user username password`, then `./run-demo.sh`.
+Then go `http://localhost:8888/` and login with 
+
 # Setup
 
 This program is a Django web application. To use it, first:
 
 *  Figure out how you're handling authentication, see [the Authentication section below](#Authentication)
-*  Edit `cachelabweb/settings.py` to change `ALLOWED_HOSTS`, `LOGIN_URL`, and `COURSE_WEBSITE`.
+*  Edit `cachelabweb/settings.py` to change `ALLOWED_HOSTS` and `COURSE_WEBSITE` and (if you are using
+   external authentication as described below) `LOGIN_URL`
 *  Do any customization of the questions you desire.
 
-Then,you can run it as a standalone web application using `python manage.py 127.0.0.1:8888` (to bind to port 8888 on localhost). When not testing, I ran it using Nginx to act as an HTTPS server which acted as a reverse proxy to a uwsgi server as the backend. Configuration files used are in `config-templates`.
+Then,you can run it as a standalone web application using `python manage.py runserver 127.0.0.1:8888` (to bind to port 8888 on localhost). When not testing, I ran it using Nginx to act as an HTTPS server which acted as a reverse proxy to a uwsgi server as the backend. Configuration files used are in `config-templates`.
 
 # Authentication
+
+## manually created accounts
+
+`manage.py` has a `make_user` subcommand which can create users with a particular username and password.
+
+## via external authentication
 
 As this was used at the University of Virginia, this web application relies on logins being forwarded from another website for authentication (rather
 than tying directly with a single-sign on system). The scripts used in Spring 2018 at the University of Virginia are in the `config-templates` directory:
@@ -44,17 +56,22 @@ The web application uses built-in Django account support, so it should be fairly
 need to add:
 
 *  identifying logged in users as staff based on their account instead of based on extra data passed on login and stored in the session.
-*  removal of the forwarded login support from `cachelabweb/urls.py`
+*  removal of the forwarded login support from `cachelab/urls.py`
+
+# General code organizatoin
+
+Everything is in the `cachelab` module. The actual exercises and the index page for them are in
+the `cachelab.exercises` module. (Code outside it that is for logistics like handling login, etc.)
 
 # Modifying the questions
 
 Most of the code that generates the questions is in `quiz/models.py` (with the corresponding HTML generation and form processing code in
-`quiz/views.py`). To change how random access patterns are generated edit the default parameters of the `random` method of `CachePattern`,
+`cachelab/exercises/views.py`). To change how random access patterns are generated edit the default parameters of the `random` method of `CachePattern`,
 and the `random_parameters_for_pattern` function. To change how random cache parameters are selected for parameter
 fill-in-the-blank questions, change the default parameters of the `random` method of `CacheParameters`.
 
 To change the number of cache parametetr questions required before the tool indicates the user is done, change `NEEDED_PARAMETER_PERFECT` in
-`quiz/views.py`.
+`cachelab/exercises/views.py`.
 
 # Retrieving grades
 
