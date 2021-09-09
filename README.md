@@ -23,7 +23,8 @@ This program is a Django web application. To use it, first:
    external authentication as described below) `LOGIN_URL`
 *  Do any customization of the questions you desire.
 
-Then,you can run it as a standalone web application using `python manage.py runserver 127.0.0.1:8888` (to bind to port 8888 on localhost). When not testing, I ran it using Nginx to act as an HTTPS server which acted as a reverse proxy to a uwsgi server as the backend. Configuration files used are in `config-templates`.
+Then,you can run it as a standalone web application using `python manage.py runserver 127.0.0.1:8888` (to bind to port 8888 on localhost).
+When not testing, I ran it using Nginx to act as an HTTPS server which acted as a reverse proxy to a uwsgi server as the backend. Configuration files used are in `config-templates`.
 
 # Authentication
 
