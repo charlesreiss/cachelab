@@ -41,8 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cachelab.exercises.apps.Config',
-    'cachelab'
+    'myauth.apps.Config'
+    'cachelab.apps.Config',
 ]
 
 MIDDLEWARE = [
@@ -55,12 +55,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'cachelab.urls'
+ROOT_URLCONF = 'cachelab.root_urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['cachelab/templates'],
+        'DIRS': ['cachelab/templates', 'myauth/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -119,6 +119,10 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'INFO',
         }, 
         'cachelab': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+        },
+        'myauth': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
         },

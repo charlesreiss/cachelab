@@ -30,7 +30,11 @@ When not testing, I ran it using Nginx to act as an HTTPS server which acted as 
 
 ## manually created accounts
 
-`manage.py` has a `make_user` subcommand which can create users with a particular username and password.
+`manage.py` has commands:
+
+*  `make_user USERNAME PASSWORD` subcommand which can create users with a particular username and password.
+*  `make_staff USERNAME` to mark a user as staff (gives access to some administrative functionality via web interface)
+*  `make_not_staff USERNAME` to mark a user as not-staff
 
 ## via external authentication
 
@@ -51,28 +55,32 @@ along with a `staff.php` script that sets:
 *  `$user` to the user ID of the user. This is the ID that will be used when extracting grading information from the web application. At the UVa, the PHP script ran an Apache webserver using the Shibboleth single-sign on authentication module, so `$user` could be set `$PHP_AUTH_USER`.
 *  `$isstaff` set to true if the user is course staff, false otherwise. Setting this flag on login enables debugging information and access to grades.
 
-## Alternate approaches
+## extending to add alternate approaches
 
-The web application uses built-in Django account support, so it should be fairly simple to use the built-in Django login support. You would
-need to add:
+The authentication uses django built-in account support, so an tools that work with django's builtin
+accounts should be able to provide alternate authentication methods.
 
-*  identifying logged in users as staff based on their account instead of based on extra data passed on login and stored in the session.
-*  removal of the forwarded login support from `cachelab/urls.py`
+The built-in `make_staff` command works by checking a table of staff users setup
+in `myauth.models`. The actual code in
+`cachelab` checks whether users are staff by looking at the `is_staff` and `cachelab_is_staff` session variable.
 
 # General code organizatoin
 
-Everything is in the `cachelab` module. The actual exercises and the index page for them are in
-the `cachelab.exercises` module. (Code outside it that is for logistics like handling login, etc.)
+The actual exercises and the index page for them are in the `cachelab` module. 
+
+The `myauth` module handles authentication. `cachelab.root_urls` sets up routing to use `myauth` alongside
+`cachelab`'s exercises. If you want to use the exercises as part of a larger django app,
+`cachelab.urls` has self-contained URLs you can use django's `include()` operation to specify.
 
 # Modifying the questions
 
-Most of the code that generates the questions is in `quiz/models.py` (with the corresponding HTML generation and form processing code in
-`cachelab/exercises/views.py`). To change how random access patterns are generated edit the default parameters of the `random` method of `CachePattern`,
+Most of the code that generates the questions is in `cachelab/models.py` (with the corresponding HTML generation and form processing code in
+`cachelab/views.py`). To change how random access patterns are generated edit the default parameters of the `random` method of `CachePattern`,
 and the `random_parameters_for_pattern` function. To change how random cache parameters are selected for parameter
 fill-in-the-blank questions, change the default parameters of the `random` method of `CacheParameters`.
 
 To change the number of cache parametetr questions required before the tool indicates the user is done, change `NEEDED_PARAMETER_PERFECT` in
-`cachelab/exercises/views.py`.
+`cachelab/views.py`.
 
 # Retrieving grades
 

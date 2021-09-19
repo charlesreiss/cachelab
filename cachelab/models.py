@@ -247,7 +247,7 @@ class CacheParameters(models.Model):
             return possible[0]
 
     @staticmethod
-    def random(
+    def generate_random(
             min_ways=1, max_ways=12, min_sets_log=0,
             max_sets_log=24, min_block_size_log=0,
             max_block_size_log=8,
@@ -275,7 +275,7 @@ class CacheParameters(models.Model):
 
 
 def random_parameters_for_pattern():
-    return CacheParameters.random(
+    return CacheParameters.generate_random(
         min_ways=2, max_ways=3,
         min_sets_log=3, max_sets_log=6,
         min_block_size_log=2, max_block_size_log=3,
@@ -370,7 +370,7 @@ class ParameterQuestion(models.Model):
     @staticmethod
     def generate_new(for_user):
         which_given = list(random.choice(all_cache_given_sets))
-        which_parameters = CacheParameters.random()
+        which_parameters = CacheParameters.generate_random()
         q = ParameterQuestion()
         last_question = ParameterQuestion.last_for_user(for_user)
         if last_question != None:
@@ -621,7 +621,7 @@ class CachePattern(models.Model):
     * setup_conflict_aggressive --- a cache miss to a most-full already accessed set
     """
     @staticmethod
-    def random(parameters,
+    def generate_random(parameters,
             num_accesses=13,
             start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'random_miss'],
             access_size=2,
