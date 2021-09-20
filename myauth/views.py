@@ -64,8 +64,6 @@ def forwarded_login(request):
             the_account = User.objects.get(username=username)
         except User.DoesNotExist:
             the_account = User.objects.create_user(username)
-        if request.get('is_staff') == None:
-            request['is_staff'] = StaffUser.objects.count(user=the_account)
         login(request, the_account)
         del request.session['allowed_logins']
         return redirect('/')
