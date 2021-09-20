@@ -1,7 +1,7 @@
 from django import template
 from django.conf import settings
 from django.contrib.auth.models import User, UserManager
-from django.contrib.auth import login
+from django.contrib.auth import login, logout as django_logout, views as auth_views
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
@@ -15,6 +15,13 @@ import logging
 import time
 
 logger = logging.getLogger('cachelab')
+
+class MyLoginView(auth_views.LoginView):
+    def form_valid(self, form):
+        result = super().form_valid(form)
+        if StaffUser.objects.filter(user=form.get_user()):
+            self.request.session['is_staff'] = 1
+        return result
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -32,9 +39,9 @@ def forwarded_login_setup(request):
         if offset < 3600:
             request.session['allowed_logins'] = request.session.get('allowed_logins', []) + [username   ]
             if data.get('staff'):
-                request.session['cachelab_is_staff'] = int(data.get('staff', '0'))
+                request.session['is_staff'] = int(data.get('staff', '0'))
             else:
-                del request.session['cachelab_is_staff']
+                del request.session['is_staff']
             return redirect('forwarded-login-prompt', username)
         else:
             return HttpResponse("Login expired.", status=401)
@@ -71,5 +78,8 @@ def logout(request):
         del request.session['allowed_logins']
     if 'is_staff' in request.session:
         del request.session['cachelab_is_staff']
-    logout(request)
-    return redirect(settings.COURSE_WEBSITE)
+    django_logout(request)
+    if settings.COURSE_WEBSITE:
+        return redirect(settings.COURSE_WEBSITE)
+    else:
+        return redirect('/')

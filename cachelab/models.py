@@ -468,6 +468,20 @@ class ParameterAnswer(models.Model):
     def best_K_for_user_by_time(user, K, time):
         return ParameterAnswer.objects.filter(for_user__exact=user, was_complete=True, submit_time__lte=time).order_by('-score_ratio', '-submit_time')[:K]
 
+    @staticmethod
+    def find_defunct(limit_per_user):
+        objects = ParameterAnswer.objects.raw('''
+            WITH by_user_index AS (
+                SELECT *,
+                    ROW_NUMBER() as which_index_time OVER window_by_user_time,
+                    ROW_NUMBER() as whcih_index_score OVER window_by_user_score,
+                WINDOW window_by_user_time (PARTITION BY user ORDER BY submit_time DESC)
+                WINDOW window_by_user_score (PARTITION BY user ORDER BY score_ratio DESC)
+                FROM cachelab_parameteranswer
+            ) SELECT * FROM by_user_index WHERE
+                which_index_time == 1 OR which_index_score <= %s
+        ''', [limit_per_user])
+
 def _update_lru(entry_list, new_most_recent):
     new_most_recent.lru = len(entry_list)
     entry_list.sort(key=lambda e: e.lru)

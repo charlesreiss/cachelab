@@ -27,6 +27,14 @@ def request_is_staff(request):
         request.session.get('is_staff') == 1
     )
 
+def staff_required(wrapped_function):
+    def real_function(request, *args, **named_args):
+        if not request_is_staff(request):
+            return HttpResponse('This feature is for staff only.', status_code=403)
+        else:
+            return wrapped_function(request, *args, **named_args)
+    return login_required(real_function)
+
 def pattern_perfect(request):
     user = request.user.get_username()
     best_pattern_answer = PatternAnswer.best_complete_for_user(request.user.get_username())
@@ -43,6 +51,15 @@ def parameter_perfect(request):
         if answer.score == answer.max_score:
             parameter_perfect_count += 1
     return parameter_perfect_count >= NEEDED_PARAMETER_PERFECT
+
+def _fill_context(request, context):
+    context.update({
+        'user': request.user.get_username(),
+        'staff': request_is_staff(request),
+        'course_website': settings.COURSE_WEBSITE,
+        'debug_enable': request_is_staff(request) and request.GET.get('debug', 'false') == 'true',
+    })
+    return context
 
 @login_required
 def index_page(request):
@@ -75,8 +92,7 @@ def index_page(request):
     else:
         pattern_score = None
         pattern_max_score = None
-    context = {
-        'user': request.user.get_username(),
+    context = _fill_context(request, {
         'parameter_in_progress': last_parameter_in_progress,
         'parameter_complete': num_parameter_answer,
         'parameter_perfect_count':  parameter_perfect_count,
@@ -87,10 +103,7 @@ def index_page(request):
         'pattern_score': pattern_score,
         'pattern_max_score': pattern_max_score,
         'pattern_perfect': pattern_score != None and pattern_score == pattern_max_score,
-
-        'staff': request_is_staff(request),
-        'course_website': settings.COURSE_WEBSITE,
-    }
+    })
     for i, answer in enumerate(best_parameter_answers):
         context['parameter_score{}'.format(i+1)] = answer.score
         context['parameter_score{}_max'.format(i+1)] = answer.max_score
@@ -135,7 +148,7 @@ def pattern_question_detail(request, question_id):
     accesses_with_default = list(accesses_with_default)
     widths = int((max(question.tag_bits, question.offset_bits, question.index_bits) + 3) / 4) + 3
     address_width = int((question.address_bits + 3) / 4) + 3
-    context = {
+    context = _fill_context(request, {
         'question': question,
         'answer': answer,
         'accesses_with_default_and_correct_and_given': accesses_with_default,
@@ -147,12 +160,9 @@ def pattern_question_detail(request, question_id):
         'evicted_width': address_width,
         'ask_evict': question.ask_evict,
         'give_first': question.give_first,
-        'staff': request_is_staff(request),
-        'debug_enable': request_is_staff(request) and request.GET.get('debug', 'false') == 'true',
-        'user': request.user.get_username(),
         'pattern_perfect': pattern_perfect(request),
         'parameter_perfect': parameter_perfect(request),
-    }
+    })
     return HttpResponse(render(request, 'exercises/pattern_question.html', context))
 
 def value_from_hex(x):
@@ -298,7 +308,7 @@ def parameter_question_detail(request, question_id):
     for answer in best_parameter_answers:
         if answer.score == answer.max_score:
             parameter_perfect_count += 1
-    context = {
+    context = _fill_context(request, {
         'show_correct': show_correct,
         'mark_invalid': mark_invalid,
         'params': params,
@@ -311,7 +321,7 @@ def parameter_question_detail(request, question_id):
         'remaining_perfect': NEEDED_PARAMETER_PERFECT - parameter_perfect_count,
 
         'pattern_perfect': pattern_perfect(request),
-    }
+    })
     return HttpResponse(render(request, 'exercises/parameter_question.html', context))
 
 @login_required
@@ -350,9 +360,8 @@ def last_parameter_question(request):
         question = ParameterQuestion.generate_new(request.user.get_username())
     return parameter_question_detail(request, question.question_id)
 
-# FIXME: make admin only
 @require_http_methods(["POST"])
-#@permission_required('quiz.delete_patternquestion')
+@staff_required
 def clear_all_questions(request):
     if PatternQuestion.objects.filter(~Q(for_user__exact='guest') & ~Q(for_user__exact='test')).count() == 0:
         PatternAnswer.objects.all().delete()
@@ -365,63 +374,54 @@ def clear_all_questions(request):
     else:
         return HttpResponse("Refusing to clear all questions.")
 
-@login_required
+@staff_required
 @require_http_methods(["POST"])
 def forget_questions(request):
-    if not request_is_staff(request):
-        return HttpResponse('This feature is for staff only.')
-    else:
-        user = request.user.get_username()
-        hidden_user = user + '+hidden'
-        PatternAnswer.objects.filter(for_user__exact=user).update(for_user=hidden_user)
-        PatternQuestion.objects.filter(for_user__exact=user).update(for_user=hidden_user)
-        ParameterAnswer.objects.filter(for_user__exact=user).update(for_user=hidden_user)
-        ParameterQuestion.objects.filter(for_user__exact=user).update(for_user=hidden_user)
-        return HttpResponse('questions forgotten')
+    user = request.user.get_username()
+    hidden_user = user + '+hidden'
+    PatternAnswer.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+    PatternQuestion.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+    ParameterAnswer.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+    ParameterQuestion.objects.filter(for_user__exact=user).update(for_user=hidden_user)
+    return HttpResponse('questions forgotten')
 
-@login_required
+@staff_required
 @require_http_methods(["POST"])
 def unforget_questions(request):
-    if request_is_staff(request):
-        return HttpResponse('This feature is for staff only.')
-    else:
-        user = request.user.get_username()
-        hidden_user = user + '+hidden'
-        PatternAnswer.objects.filter(for_user__exact=hidden_user).update(for_user=user)
-        PatternQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
-        ParameterAnswer.objects.filter(for_user__exact=hidden_user).update(for_user=user)
-        ParameterQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
-        return HttpResponse('questions unforgotten')
+    user = request.user.get_username()
+    hidden_user = user + '+hidden'
+    PatternAnswer.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+    PatternQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+    ParameterAnswer.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+    ParameterQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
+    return HttpResponse('questions unforgotten')
 
-@login_required
+@staff_required
 def get_scores_csv(request):
-    if not request_is_staff(request):
-        return HttpResponse('This feature is for staff only.')
-    else:
-        due_datetime = datetime.datetime.strptime(request.GET.get('due'), '%Y-%m-%dT%H:%M%z')
-        response = HttpResponse(content_type='text/csv')
-        writer = csv.writer(response)
-        writer.writerow(['compid', 'parameter scores', 'pattern score', 'lab score [10]'])
-        for user in map(lambda x: x.get_username(), User.objects.all()):
-            parameter_answers = ParameterAnswer.best_K_for_user_by_time(user, NEEDED_PARAMETER_PERFECT, due_datetime)
-            pattern_answer = PatternAnswer.best_complete_for_user_by_time(user, due_datetime)
-            param_complete = False
-            param_scores = []
-            total_param_score = 0.0
-            for answer in parameter_answers:
-                param_scores.append('{}/{}'.format(answer.score, answer.max_score))
-                total_param_score += float(answer.score) / float(answer.max_score)
-            pattern_score = '(none)'
-            total_pattern_score = 0.0
-            if pattern_answer != None:
-                pattern_score = '{}/{}'.format(pattern_answer.score, pattern_answer.max_score)
-                total_pattern_score += float(pattern_answer.score) / float(pattern_answer.max_score)
-            score = (
-                        total_param_score / NEEDED_PARAMETER_PERFECT +
-                        total_pattern_score
-                    ) / 2.0 * 10.0
-            if total_param_score > 2:
-                score = max(5.0, score)
-            score = '{:.1f}'.format(score)
-            writer.writerow([user, ' and '.join(param_scores), pattern_score, score])
-        return response
+    due_datetime = datetime.datetime.strptime(request.GET.get('due'), '%Y-%m-%dT%H:%M%z')
+    response = HttpResponse(content_type='text/csv')
+    writer = csv.writer(response)
+    writer.writerow(['compid', 'parameter scores', 'pattern score', 'lab score [10]'])
+    for user in map(lambda x: x.get_username(), User.objects.all()):
+        parameter_answers = ParameterAnswer.best_K_for_user_by_time(user, NEEDED_PARAMETER_PERFECT, due_datetime)
+        pattern_answer = PatternAnswer.best_complete_for_user_by_time(user, due_datetime)
+        param_complete = False
+        param_scores = []
+        total_param_score = 0.0
+        for answer in parameter_answers:
+            param_scores.append('{}/{}'.format(answer.score, answer.max_score))
+            total_param_score += float(answer.score) / float(answer.max_score)
+        pattern_score = '(none)'
+        total_pattern_score = 0.0
+        if pattern_answer != None:
+            pattern_score = '{}/{}'.format(pattern_answer.score, pattern_answer.max_score)
+            total_pattern_score += float(pattern_answer.score) / float(pattern_answer.max_score)
+        score = (
+                    total_param_score / NEEDED_PARAMETER_PERFECT +
+                    total_pattern_score
+                ) / 2.0 * 10.0
+        if total_param_score > 2:
+            score = max(5.0, score)
+        score = '{:.1f}'.format(score)
+        writer.writerow([user, ' and '.join(param_scores), pattern_score, score])
+    return response

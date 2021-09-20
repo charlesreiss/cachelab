@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import Permission, User
 
-from cachelab.models import StaffUser
+from myauth.models import StaffUser
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
