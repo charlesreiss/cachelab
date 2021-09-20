@@ -850,7 +850,7 @@ class PatternQuestion(models.Model):
             index = last_question.index + 1
         else:
             index = 0
-        pattern = CachePattern.random(parameters, **extra_args)
+        pattern = CachePattern.generate_random(parameters, **extra_args)
         result = PatternQuestion()
         result.pattern = pattern
         result.for_user = for_user
