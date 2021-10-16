@@ -40,7 +40,7 @@ def forwarded_login_setup(request):
             request.session['allowed_logins'] = request.session.get('allowed_logins', []) + [username   ]
             if data.get('staff'):
                 request.session['is_staff'] = int(data.get('staff', '0'))
-            else:
+            else if request.session.get('is_staff') != None:
                 del request.session['is_staff']
             return redirect('forwarded-login-prompt', username)
         else:
