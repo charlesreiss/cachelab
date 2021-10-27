@@ -59,7 +59,7 @@ def forwarded_login_prompt(request, username):
 
 def forwarded_login(request):
     username = request.POST['username']
-    if username in request.session['allowed_logins']:
+    if username in request.session.get('allowed_logins', []):
         try:
             the_account = User.objects.get(username=username)
         except User.DoesNotExist:
