@@ -76,7 +76,7 @@ def logout(request):
     if 'allowed_logins' in request.session:
         del request.session['allowed_logins']
     if 'is_staff' in request.session:
-        del request.session['cachelab_is_staff']
+        del request.session['is_staff']
     django_logout(request)
     if settings.COURSE_WEBSITE:
         return redirect(settings.COURSE_WEBSITE)
