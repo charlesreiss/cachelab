@@ -980,3 +980,9 @@ class PatternAnswer(models.Model):
     @staticmethod
     def last_for_user(user):
         return PatternAnswer.objects.filter(for_user__exact=user).order_by('-submit_time').first()
+
+def extract_best_for_user(user, due_datetime, num_parameter):
+    return {
+        'parameters': ParameterAnswer.best_K_for_user_by_time(user, num_parameter, due_datetime),
+        'pattern': PatternAnswer.best_complete_for_user_by_time(user, due_datetime),
+    }

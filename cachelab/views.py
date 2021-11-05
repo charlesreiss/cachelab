@@ -15,7 +15,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import permission_required, login_required
 
 
-from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, ResultItem, all_cache_question_parameters, random_parameters_for_pattern
+from .models import PatternAnswer, PatternQuestion, CacheAccessResult, CachePattern, CacheParameters, ParameterQuestion, ParameterAnswer, ResultItem, all_cache_question_parameters, random_parameters_for_pattern, extract_best_for_user
 
 logger = logging.getLogger('cachelabweb')
 
@@ -396,32 +396,61 @@ def unforget_questions(request):
     ParameterQuestion.objects.filter(for_user__exact=hidden_user).update(for_user=user)
     return HttpResponse('questions unforgotten')
 
+def _make_score_csv_line(answers):
+    parameter_answers = answers['parameters']
+    pattern_answer = answers['pattern']
+    parameter_scores = []
+    parameter_max_scores = []
+    total_parameter_score = 0.0
+    for answer in parameter_answers:
+        parameter_scores.append('{}'.format(answer.score))
+        parameter_max_scores.append('{}'.format(answer.max_score))
+        total_parameter_score += float(answer.score) / float(answer.max_score)
+    pattern_score = ''
+    pattern_max_score = ''
+    total_pattern_score = 0.0
+    if pattern_answer != None:
+        pattern_score = '{}'.format(pattern_answer.score)
+        pattern_max_score = '{}'.format(pattern_answer.max_score)
+        total_pattern_score += float(pattern_answer.score) / float(pattern_answer.max_score)
+    score = (
+                total_parameter_score / NEEDED_PARAMETER_PERFECT +
+                total_pattern_score
+            ) / 2.0 * 10.0
+    if total_parameter_score > 2:
+        score = max(5.0, score)
+    score = '{:.1f}'.format(score)
+    result = {
+        'pattern score': pattern_score,
+        'pattern max score': pattern_max_score,
+        'overall score': score,
+        'overall max score': 10.0,
+    }
+    for i, (parameter_score, parameter_max_score) in enumerate(zip(parameter_scores, parameter_max_scores)):
+        result['parameter score {}'.format(i)] = parameter_score
+        result['parameter max score {}'.format(i)] = parameter_max_score
+    return result
+
+def make_score_csv(out_fh, due_datetime, override_due_datetime):
+    fields = ['user']
+    for i in range(NEEDED_PARAMETER_PERFECT):
+        fields.append('parameter score {}'.format(i))
+        fields.append('parameter max score {}'.format(i))
+    fields.append('pattern score')
+    fields.append('pattern max score')
+    fields.append('overall score')
+    fields.append('overall max score')
+    writer = csv.DictWriter(out_fh, fields)
+    writer.writeheader()
+    for user in map(lambda x: x.get_username(), User.objects.all()):
+        cur_due = override_due_datetime.get(user, due_datetime)
+        answers = extract_best_for_user(user, cur_due, NEEDED_PARAMETER_PERFECT)
+        for_csv = _make_score_csv_line(answers)
+        for_csv['user'] = user
+        writer.writerow(for_csv)
+
 @staff_required
 def get_scores_csv(request):
     due_datetime = datetime.datetime.strptime(request.GET.get('due'), '%Y-%m-%dT%H:%M%z')
     response = HttpResponse(content_type='text/csv')
-    writer = csv.writer(response)
-    writer.writerow(['compid', 'parameter scores', 'pattern score', 'lab score [10]'])
-    for user in map(lambda x: x.get_username(), User.objects.all()):
-        parameter_answers = ParameterAnswer.best_K_for_user_by_time(user, NEEDED_PARAMETER_PERFECT, due_datetime)
-        pattern_answer = PatternAnswer.best_complete_for_user_by_time(user, due_datetime)
-        param_complete = False
-        param_scores = []
-        total_param_score = 0.0
-        for answer in parameter_answers:
-            param_scores.append('{}/{}'.format(answer.score, answer.max_score))
-            total_param_score += float(answer.score) / float(answer.max_score)
-        pattern_score = '(none)'
-        total_pattern_score = 0.0
-        if pattern_answer != None:
-            pattern_score = '{}/{}'.format(pattern_answer.score, pattern_answer.max_score)
-            total_pattern_score += float(pattern_answer.score) / float(pattern_answer.max_score)
-        score = (
-                    total_param_score / NEEDED_PARAMETER_PERFECT +
-                    total_pattern_score
-                ) / 2.0 * 10.0
-        if total_param_score > 2:
-            score = max(5.0, score)
-        score = '{:.1f}'.format(score)
-        writer.writerow([user, ' and '.join(param_scores), pattern_score, score])
-    return response
+    make_score_csv(response, due_datetime, {})
