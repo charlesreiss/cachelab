@@ -427,15 +427,15 @@ def _make_score_csv_line(answers):
         'overall max score': 10.0,
     }
     for i, (parameter_score, parameter_max_score) in enumerate(zip(parameter_scores, parameter_max_scores)):
-        result['parameter score {}'.format(i)] = parameter_score
-        result['parameter max score {}'.format(i)] = parameter_max_score
+        result['parameter score {}'.format(i+1)] = parameter_score
+        result['parameter max score {}'.format(i+1)] = parameter_max_score
     return result
 
 def make_score_csv(out_fh, due_datetime, override_due_datetime):
     fields = ['user']
     for i in range(NEEDED_PARAMETER_PERFECT):
-        fields.append('parameter score {}'.format(i))
-        fields.append('parameter max score {}'.format(i))
+        fields.append('parameter score {}'.format(i+1))
+        fields.append('parameter max score {}'.format(i+1))
     fields.append('pattern score')
     fields.append('pattern max score')
     fields.append('overall score')

@@ -6,6 +6,7 @@ from django.db import IntegrityError
 from cachelab.views import make_score_csv
 
 import datetime
+from dateutil.parser import isoparse
 import sys
 
 class Command(BaseCommand):
@@ -14,11 +15,11 @@ class Command(BaseCommand):
         parser.add_argument('--exceptions', default='')
 
     def handle(self, *args, **options):
-        due_date = datetime.datetime.strptime(options['deadline'], '%Y-%m-%dT%H:%M:%S%z')
+        due_date = isoparse(options['deadline'])
         due_exceptions = {}
         for item in options['exceptions'].split(','):
             if item == '':
                 continue
             user, cur_date = item.split('=', 1)
-            due_exceptions[user] = datetime.datetime.strptime(cur_date, '%Y-%m-%dT%H:%M:%S%z')
+            due_exceptions[user] = isoparse(cur_date)
         make_score_csv(sys.stdout, due_date, due_exceptions)
