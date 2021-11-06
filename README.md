@@ -84,10 +84,13 @@ To change the number of cache parametetr questions required before the tool indi
 
 # Retrieving grades
 
-If you login as staff, there is an option to retrieve grades as a CSV file. The grade formula is hard-coded in `get_scores_csv`, and
+If you login as staff, there is an option to retrieve grades as a CSV file. Alternately, you can use the dump_grades command of manage.py
+
+The grade formula is hard-coded in `get_scores_csv`, and
 gives 5 points for the parameter questions and 5 points for the pattern questions, with a minimum score of 5 for students who get
 at least 2 points on their best 3 parameter questions (counting each question as 1 point). When retrieving the CSV file, you are required
-to entire a due time, the CSV file retrieved will ignore all work done after that due time.
+to entire a due time, the CSV file retrieved will ignore all work done after that due time. The dump_grades command should support
+specifying individual exceptions for students.
 
 # Missing features / regrets
 
