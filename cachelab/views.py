@@ -343,6 +343,7 @@ def parameter_question_detail(request, question_id):
     })
     return HttpResponse(render(request, 'exercises/parameter_question.html', context))
 
+
 @login_required
 @require_http_methods(["POST"])
 def parameter_answer(request, question_id):
