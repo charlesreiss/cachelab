@@ -28,7 +28,7 @@ DEBUG = os.getenv('DJANGO_DEBUG_ON', 'false') == 'true'
 
 if not DEBUG:
     ALLOWED_HOSTS = [
-        'kytos.cs.virginia.edu'
+        'kytos02.cs.virginia.edu'
     ]
 
 
@@ -155,5 +155,5 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = 'DENY'
 
-LOGIN_URL = 'https://kytos.cs.virginia.edu/cs3330/cachelab/cachelab.php'
-COURSE_WEBSITE = 'https://www.cs.virginia.edu/~cr4bd/3330/S2019/'
+LOGIN_URL = 'https://kytos02.cs.virginia.edu/cs3330-fall2022/cachelab/cachelab.php'
+COURSE_WEBSITE = 'https://www.cs.virginia.edu/~cr4bd/3330/F2022/'
