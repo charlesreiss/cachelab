@@ -255,11 +255,11 @@ def _name_parameter(parameter):
 
 def format_value_with_postfix(value):
     if value > 1024 * 1024 * 1024 and value % (1024 * 1024 * 1024) == 0:
-        return '%dG' % (value / (1024 * 1024 * 1024))
+        return '%dG (= %d)' % (value / (1024 * 1024 * 1024), value)
     elif value > 1024 * 1024 and value % (1024 * 1024) == 0:
-        return '%dM' % (value / (1024 * 1024))
+        return '%dM (= %d)' % (value / (1024 * 1024), value)
     elif value > 1024 and value % (1024) == 0:
-        return '%dK' % (value / (1024))
+        return '%dK (= %d)' % (value / (1024), value)
     else:
         return '%d' % (value)
 
