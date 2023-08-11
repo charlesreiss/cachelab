@@ -11,8 +11,10 @@ The tool requires three sets of questions to be answered of the first type and o
 
 # Quick demo
 
+Setup a Python environment with Django and dateutils installed.
+
 Run `./run-demo.sh migrate`, then `./run-demo.sh make_user username password`, then `./run-demo.sh`.
-Then go `http://localhost:8888/` and login with 
+Then go `http://localhost:8888/` and login with the username you created.
 
 # Setup
 
