@@ -83,6 +83,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'OPTIONS': {
+            'timeout': 30,
+        },
     }
 }
 
@@ -155,5 +158,5 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = 'DENY'
 
-LOGIN_URL = 'https://kytos02.cs.virginia.edu/cs3330-fall2022/cachelab/cachelab.php'
-COURSE_WEBSITE = 'https://www.cs.virginia.edu/~cr4bd/3330/F2022/'
+LOGIN_URL = 'https://kytos02.cs.virginia.edu/cs3130-spring2023/cachelab/cachelab.php'
+COURSE_WEBSITE = 'https://www.cs.virginia.edu/~cr4bd/3130/S2023/'
