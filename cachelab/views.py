@@ -109,6 +109,19 @@ def index_page(request):
         context['parameter_score{}_max'.format(i+1)] = answer.max_score
     return HttpResponse(render(request, 'exercises/user_index.html', context))
 
+@login_required
+def list_pattern_questions(request):
+    user = request.user.get_username()
+    all_questions = PatternQuestion.objects.filter(for_user__exact=user).order_by('-index')
+    context = _fill_context(request, {})
+    lst = []
+    for question in all_questions:
+        lst.append((
+            question,
+            PatternAnswer.last_for_question_and_user(question, user)
+        ))
+    context['old_questions'] = lst
+    return HttpResponse(render(request, 'exercises/pattern_question_list.html', context))
 
 @login_required
 def last_pattern_question(request):
@@ -135,6 +148,9 @@ def pattern_question_detail(request, question_id):
     question = PatternQuestion.objects.get(question_id=question_id)
     if question.for_user != request.user.get_username():
         raise PermissionDenied()
+    latest_question = PatternQuestion.last_for_user(request.user.get_username())
+    show_old = latest_question.question_id != question.question_id
+    have_old = latest_question.index > 0
     answer = PatternAnswer.last_for_question_and_user(question, request.user.get_username())
     empty_access = CacheAccessResult.empty()
     is_given = itertools.chain([True] * question.give_first, itertools.cycle([False]))
@@ -162,6 +178,8 @@ def pattern_question_detail(request, question_id):
         'give_first': question.give_first,
         'pattern_perfect': pattern_perfect(request),
         'parameter_perfect': parameter_perfect(request),
+        'show_old': show_old,
+        'have_old': have_old,
     })
     return HttpResponse(render(request, 'exercises/pattern_question.html', context))
 
@@ -262,6 +280,7 @@ def format_value_with_postfix(value):
         return '%dK (= %d)' % (value / (1024), value)
     else:
         return '%d' % (value)
+
 
 @login_required
 def parameter_question_detail(request, question_id):

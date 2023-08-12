@@ -42,10 +42,18 @@ You have completed the lab, but you may still request additional problems <em>fo
 {% if show_correct %}<form>{% csrf_token %}
 <p>
 Showing answer submitted at {{ answer.submit_time }} which earned {{ answer.score }} out of  {{ answer.max_score }} points. {% if answer.score != answer.max_score %}Incorrect answers are shown with <span class="correction">red</span> corrections below.{% endif %}<br />
+{% if show_old %}
+You are reviewing an older submission. You can also view your <a href="{% url 'last-pattern-question' %}">most recent access pattern question</a>.
+{% else %}
 If you'd like to try again, you can
 <button formmethod="POST" formaction="{% url 'new-pattern-question' %}">get a new question</button>
+{% endif %}
 </p>
 </form>
+{% endif %}
+
+{% if have_old and not show_old %}
+(You can also review your <a href="{% url 'pattern-question-list' %}">previous access pattern question answers</a>.)
 {% endif %}
 
 {% if show_invalid %}
