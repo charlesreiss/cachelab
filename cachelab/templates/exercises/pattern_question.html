@@ -93,7 +93,7 @@ The first {{ give_first }} answers are given.
         {% endif %}
         <li>
             <!-- access location/size -->
-            {{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.parameters.address_bits %}</code>: <br>
+            {{access.size}} bytes at address <code class="addr">{% format_hex access.address question.pattern.parameters.address_bits %}</code> (binary <code class="addr">{% format_bin access.address 12 %}</code>): <br>
             {% if show_correct %}
             {% if old_answer.tag.correct and old_answer.index.correct and old.answer.offset.correct and old_answer.hit.correct and old.answer.evicted.correct %}
             (correct)
