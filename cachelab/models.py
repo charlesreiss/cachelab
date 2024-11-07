@@ -273,7 +273,6 @@ class CacheParameters(models.Model):
                 break
         return CacheParameters.get(num_ways=num_ways, num_sets=num_sets, block_size=block_size, address_bits=address_bits)
 
-
 def random_parameters_for_pattern():
     return CacheParameters.generate_random(
         min_ways=2, max_ways=3,
@@ -511,7 +510,24 @@ class CacheState():
 
     def to_entries(self):
         return self.entries
-    
+
+    def get_recentness(self, address):
+        (tag, index, _) = self.params.split_address(address)
+        entries_at_index = self.entries[index]
+        missing_entries = 0
+        for possible in entries_at_index:
+            if possible.valid == False:
+                missing_entries += 1
+        for possible in entries_at_index:
+            if possible.tag == tag:
+                found = possible
+                break
+        if found == None:
+            return None
+        else:
+            return found.lru - missing_entries
+
+     
     def apply_access(self, access, dry_run=False):
         (tag, index, offset) = self.params.split_address(access.address)
         logger.debug('apply_access(%x,%x,%x)', tag, index, offset)
@@ -633,11 +649,12 @@ class CachePattern(models.Model):
     * conflict_miss --- a cache miss to a previously evicted block
     * setup_conflict --- a cache miss to an already-accessed set
     * setup_conflict_aggressive --- a cache miss to a most-full already accessed set
+    * hit_lru --- a cache hit to a LRU item
     """
     @staticmethod
     def generate_random(parameters,
-            num_accesses=13,
-            start_actions = ['random_miss', 'hit', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'random_miss'],
+            num_accesses=14,
+            start_actions=None,
             access_size=2,
             chance_setup_conflict_aggressive=0,
             chance_setup_conflict=0.5,
@@ -646,6 +663,9 @@ class CachePattern(models.Model):
             chance_random_miss=1,
             chance_miss_prefer_empty=0,
             chance_miss_prefer_used=0.5):
+        DEFAULT_START_ACTIONS = ['random_miss', 'setup_conflict_aggressive', 'hit_lru', 'setup_conflict_aggressive', 'setup_conflict_aggressive', 'random_miss']
+        if start_actions == None:
+            start_actions = DEFAULT_START_ACTIONS
         MAX_TRIES = 20
         MAX_RANDOM_LIST = 1000
         result = CachePattern()
@@ -727,6 +747,13 @@ class CachePattern(models.Model):
             if address == None:
                 address = _find_used_miss()
             return address
+
+        def _find_hit_lru():
+            would_hit_lru = list(filter(lambda x: state.get_recentness(x) == 0, would_hit))
+            if len(would_hit_lru) > 0:
+                return random.choice(would_hit_lru)
+            else:
+                return random.choice(list(would_hit))
             
         for i in range(num_accesses):
             if i < len(start_actions):
@@ -758,6 +785,8 @@ class CachePattern(models.Model):
                     address = _find_random_miss()
             elif access_kind == 'miss_prefer_used':
                 address = _find_used_miss()
+            elif access_kind == 'hit_lru':
+                address = _find_hit_lru()
             elif access_kind == 'hit':
                 address = random.choice(list(would_hit))
             elif access_kind == 'conflict_miss':
@@ -816,7 +845,7 @@ class PatternQuestion(models.Model):
     for_user = models.TextField()
     ask_evict = models.BooleanField(default=True)
     index = models.IntegerField()
-    give_first = models.IntegerField(default=5)
+    give_first = models.IntegerField(default=6)
    
     class Meta: 
         indexes = [

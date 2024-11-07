@@ -51,7 +51,7 @@ def forwarded_login_setup(request):
 def forwarded_login_prompt(request, username):
     logger.debug('session is %s', request.session.items())
     if request.user.get_username() == username:
-        return redirect('/')
+        return redirect('user-index')
     elif username in request.session['allowed_logins']:
         return HttpResponse(render(request, 'login_prompt.html', {'username': username}))
     else:
@@ -67,7 +67,7 @@ def forwarded_login(request):
         login(request, the_account)
         if 'allowed_logins' in request.session:
             del request.session['allowed_logins']
-        return redirect('/')
+        return redirect('user-index')
     else:
         return HttpReponse(status=401)
 
@@ -81,4 +81,4 @@ def logout(request):
     if settings.COURSE_WEBSITE:
         return redirect(settings.COURSE_WEBSITE)
     else:
-        return redirect('/')
+        return redirect('user-index')
